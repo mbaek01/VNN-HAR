@@ -1,0 +1,7 @@
+dotmap
+scipy
+numpy
+pandas
+torch
+pyyaml>=5.1
+scikit-learn
