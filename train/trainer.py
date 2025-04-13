@@ -1,0 +1,113 @@
+import time
+import torch
+import numpy as np
+from sklearn.metrics import f1_score, accuracy_score
+
+from utils import EarlyStopping, adjust_learning_rate_class
+
+class Trainer:
+    def __init__(self, args, model, epoch_log):
+        self.model = model.model
+        self.device = model.device
+
+        self.criterion = model.select_criterion().to(self.device)
+        self.optimizer = model.select_optimizer()
+
+        self.epoch_log = epoch_log
+        self.epochs = args.train_epochs
+        self.path = args.to_save_path
+
+        self.early_stopping = EarlyStopping(patience=args.early_stop_patience, verbose=True)
+        self.learning_rate_adapter = adjust_learning_rate_class(args, True)
+
+    def train_epoch(self, train_loader):
+        train_loss = []
+        epoch_time = time.time()
+        
+        for batch_x1, batch_y in train_loader:
+            batch_x1 = batch_x1.double().to(self.device)
+            batch_y = batch_y.long().to(self.device)
+
+            outputs = self.model(batch_x1)
+            loss = self.criterion(outputs, batch_y)
+
+            train_loss.append(loss.item())
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+        epoch_time = time.time() - epoch_time
+        train_loss = np.average(train_loss)
+        
+        return train_loss, epoch_time
+
+    def validate(self, valid_loader):
+        self.model.eval()
+        total_loss = []
+        predictions = []
+        true_labels = []
+
+        with torch.no_grad():
+            for batch_x1, batch_y in valid_loader:
+                batch_x1 = batch_x1.double().to(self.device)
+                batch_y = batch_y.long().to(self.device)
+
+                outputs = self.model(batch_x1)
+                loss = self.criterion(outputs, batch_y)
+                total_loss.append(loss.item())
+
+                pred = outputs.detach().argmax(dim=1).cpu().numpy() # argmax?
+                true = batch_y.detach().cpu().numpy()
+                
+                predictions.extend(pred)
+                true_labels.extend(true)
+
+
+        predictions = np.array(predictions)
+        true_labels = np.array(true_labels)
+
+        valid_loss = np.average(total_loss)
+
+        acc = accuracy_score(true_labels, predictions)
+        f_w = f1_score(true_labels, predictions, average='weighted')
+        f_macro = f1_score(true_labels, predictions, average='macro')
+        f_micro = f1_score(true_labels, predictions, average='micro')
+
+        return valid_loss, acc, f_w, f_macro, f_micro
+
+    def train(self, train_loader, valid_loader):
+        for epoch in range(self.epochs):
+            train_loss, epoch_time = self.train_epoch(train_loader)
+            
+            if self.epoch_log is not None:
+                self.epoch_log.write(f"Epoch: {epoch+1}, train_loss: {train_loss}, Cost time: {epoch_time}\n")
+                
+            print(f"Epoch: {epoch+1}, train_loss: {train_loss}, Cost time: {epoch_time}")
+
+            # Validation phase
+            valid_loss, valid_acc, valid_f_w, valid_f_macro, valid_f_micro = self.validate(valid_loader)
+            
+            print(f"VALID: Epoch: {epoch+1}, "
+                  f"Train Loss: {train_loss:.7f}, "
+                  f"Valid Loss: {valid_loss:.7f}, "
+                  f"Valid Accuracy: {valid_acc:.7f}, "
+                  f"Valid weighted F1: {valid_f_w:.7f}, "
+                  f"Valid macro F1: {valid_f_macro:.7f}")
+        
+            self.epoch_log.write(f"VALID: Epoch: {epoch+1}, "
+                                f"Train Loss: {train_loss:.7f}, "
+                                f"Valid Loss: {valid_loss:.7f}, "
+                                f"Valid Accuracy: {valid_acc:.7f}, "
+                                f"Valid weighted F1: {valid_f_w:.7f}, "
+                                f"Valid macro F1: {valid_f_macro:.7f} \n")
+
+            self.early_stopping(valid_loss, self.model, self.path, valid_f_macro, valid_f_w, self.epoch_log)
+            if self.early_stopping.early_stop:
+                print("Early stopping")
+                break
+
+            self.epoch_log.write("----------------------------------------------------------------------------------------\n")
+            self.epoch_log.flush()
+            
+            self.learning_rate_adapter(self.optimizer, valid_loss)
+        return self.model 
