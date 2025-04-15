@@ -5,6 +5,7 @@ from torch import optim
 import yaml
 
 from models.baseline import Baseline
+from models.vnn_mlp import VNN_MLP
 
 class Model(object):
     def __init__(self, args):
@@ -57,16 +58,26 @@ class model_builder(nn.Module):
                                    "leakyrelu":nn.LeakyReLU, 
                                    #"vnleakyrelu":VLeakyReLU
                                    }
-
-        # TODO: choosing model type if there are multiple
         config_file = open('./configs/model.yaml', mode='r')
-        config = yaml.load(config_file, Loader=yaml.FullLoader)
-        self.model = Baseline(int(args.input_length * args.c_in),
-                              args.num_classes,
-                              self.activation_fn_dict[args.activation_fn]
-                              )
 
-        print("Using the Baseline model")
+        if args.model_name == "baseline":
+            config = yaml.load(config_file, Loader=yaml.FullLoader)['baseline']
+            self.model = Baseline(int(args.input_length * args.c_in),
+                                args.num_classes,
+                                self.activation_fn_dict[args.activation_fn]
+                                )
+
+            print("Using the Baseline model")
+
+        elif args.model_name == "vnn_mlp":
+            config = yaml.load(config_file, Loader=yaml.FullLoader)['vnn_mlp']
+
+            self.model = VNN_MLP(args.batch_size, args.input_length, args.c_in, args.num_classes)
+
+            print("Using the VNN_MLP model")
+
+        else:
+            raise NotImplementedError
 
     def forward(self, x):
         y = self.model(x)

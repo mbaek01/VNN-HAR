@@ -236,5 +236,19 @@ def get_setting_name(args):
                                                                         args.windowsize
                                                                         )
             return setting
+        if args.model_name== "baseline2":
+            config_file = open('configs/model.yaml', mode='r')
+            config = yaml.load(config_file, Loader=yaml.FullLoader)["baseline2"]
+            setting = "baseline_data_{}_seed_{}_windowsize_{}".format(args.data_name,
+                                                                        args.seed,
+                                                                        args.windowsize
+                                                                        )
+            return setting
+        if args.model_name== "vnn_mlp":
+            setting = "vnn_mlp_data_{}_seed_{}_windowsize_{}".format(args.data_name,
+                                                                        args.seed,
+                                                                        args.windowsize
+                                                                        )
+            return setting
         else:
             raise NotImplementedError

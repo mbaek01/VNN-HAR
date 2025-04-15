@@ -31,7 +31,7 @@ if __name__ == '__main__':
     args.gpu = 0
     args.use_multi_gpu = False
 
-    args.model_name = "baseline"
+    args.model_name = "vnn_mlp" #baseline2
     args.optimizer = "Adam"
     args.criterion = "CrossEntropy"
     args.exp_mode = "LOCV"
