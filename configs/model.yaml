@@ -2,4 +2,12 @@ baseline:
   num_layers: 4
   num_units: 128
   activation_fn: leaky_relu
+
+baseline2:
+  num_layers: 5
+  num_units: 128
+  activation_fn: leaky_relu
   
+vnn_mlp:
+  num_layers: 5
+  num_units: 128
