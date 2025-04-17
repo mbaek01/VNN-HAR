@@ -228,27 +228,40 @@ class adjust_learning_rate_class:
             self.counter = 0
 
 def get_setting_name(args):
-        if args.model_name== "baseline":
-            config_file = open('configs/model.yaml', mode='r')
-            config = yaml.load(config_file, Loader=yaml.FullLoader)["baseline"]
-            setting = "baseline_data_{}_seed_{}_windowsize_{}".format(args.data_name,
-                                                                        args.seed,
-                                                                        args.windowsize
-                                                                        )
-            return setting
-        if args.model_name== "baseline2":
-            config_file = open('configs/model.yaml', mode='r')
-            config = yaml.load(config_file, Loader=yaml.FullLoader)["baseline2"]
-            setting = "baseline_data_{}_seed_{}_windowsize_{}".format(args.data_name,
-                                                                        args.seed,
-                                                                        args.windowsize
-                                                                        )
-            return setting
-        if args.model_name== "vnn_mlp":
-            setting = "vnn_mlp_data_{}_seed_{}_windowsize_{}".format(args.data_name,
-                                                                        args.seed,
-                                                                        args.windowsize
-                                                                        )
-            return setting
-        else:
-            raise NotImplementedError
+    config_file = open('configs/model.yaml', mode='r')
+
+    if args.model_name== "baseline":
+        config = yaml.load(config_file, Loader=yaml.FullLoader)["baseline"]
+        setting = "baseline_data_{}_seed_{}_windowsize_{}".format(args.data_name,
+                                                                    args.seed,
+                                                                    args.windowsize
+                                                                    )
+        return setting
+    
+    if args.model_name== "baseline_attn":
+        config = yaml.load(config_file, Loader=yaml.FullLoader)["baseline_attn"]
+        setting = "baseline_attn_data_{}_seed_{}_windowsize_{}".format(args.data_name,
+                                                                    args.seed,
+                                                                    args.windowsize
+                                                                    )
+        return setting
+    
+    if args.model_name== "vnn_mlp":
+        config = yaml.load(config_file, Loader=yaml.FullLoader)["vnn_mlp"]
+        setting = "vnn_mlp_data_{}_seed_{}_windowsize_{}".format(args.data_name,
+                                                                    args.seed,
+                                                                    args.windowsize
+                                                                    )
+        return setting
+    
+    if args.model_name == "deepconvlstm_attn":
+        config = yaml.load(config_file, Loader=yaml.FullLoader)["deepconvlstm_attn"]
+        setting = "deepconvlstm_attn_data_{}_seed_{}_windowsize_{}_cvfilter_{}_lstmfilter_{}".format(args.data_name,
+                                                                                                    args.seed,
+                                                                                                    args.windowsize,
+                                                                                                    config["nb_filters"],
+                                                                                                    config["nb_units_lstm"],
+                                                                                                    )
+        return setting
+    else:
+        raise NotImplementedError

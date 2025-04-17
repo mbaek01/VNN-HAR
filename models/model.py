@@ -4,8 +4,9 @@ import torch.nn as nn
 from torch import optim
 import yaml
 
-from models.baseline import Baseline
+from models.baseline import Baseline, Baseline_Attn
 from models.vnn_mlp import VNN_MLP
+from models.deepconvlstm_attn import DeepConvLSTM_ATTN
 
 class Model(object):
     def __init__(self, args):
@@ -68,6 +69,14 @@ class model_builder(nn.Module):
                                 )
 
             print("Using the Baseline model")
+        
+        elif args.model_name =="baseline_attn":
+            config = yaml.load(config_file, Loader=yaml.FullLoader)['baseline_attn']
+            self.model = Baseline_Attn(args.c_in,
+                                args.num_classes,
+                                config["nb_units"],
+                                self.activation_fn_dict[args.activation_fn]
+                                )
 
         elif args.model_name == "vnn_mlp":
             config = yaml.load(config_file, Loader=yaml.FullLoader)['vnn_mlp']
@@ -75,6 +84,15 @@ class model_builder(nn.Module):
             self.model = VNN_MLP(args.batch_size, args.input_length, args.c_in, args.num_classes)
 
             print("Using the VNN_MLP model")
+
+        elif args.model_name == "deepconvlstm_attn":
+            config_file = open('./configs/model.yaml', mode='r')
+            config = yaml.load(config_file, Loader=yaml.FullLoader)["deepconvlstm_attn"]
+            self.model  = DeepConvLSTM_ATTN((1, args.input_length, args.c_in), 
+                                            args.num_classes,
+                                            # self.args.filter_scaling_factor,
+                                            config)
+            print("Build the deepconvlstm_attn model!")
 
         else:
             raise NotImplementedError
