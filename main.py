@@ -1,9 +1,7 @@
-from dotmap import DotMap
+import argparse
 import os
-import time
 import torch
-import numpy as np
-import pandas as pd
+import yaml
 
 from dataloaders.data_loader import PAMAP2, get_data
 from models.model import Model
@@ -11,20 +9,17 @@ from utils import set_seed, get_setting_name
 from train.trainer import Trainer
 
 if __name__ == '__main__': 
-    config = {
-                # Dataset
-                "filename": "PAMAP2_Dataset/Protocol",
-                "sampling_freq": 33,
-                "num_classes": 12,
-                "num_channels": 9,
-                "window_seconds": 5.12,
-            }
+    parser = argparse.ArgumentParser(description='Rotation-Invariant HAR Classification using Vector Neuron Network')
+    parser.add_argument('-d', '--data_name', default='pamap2', type=str, help='Name of the Dataset')
 
-    # TODO: move model and data config to yaml file
-    args = DotMap()
+    config_file = open('configs/data.yaml', mode='r')
+    config = yaml.load(config_file, Loader=yaml.FullLoader)
 
-    args.data_name = "PAMAP2" # to config 
-    args.data_path = "datasets/PAMAP2_Dataset/Protocol"
+    args = parser.parse_args()
+
+    config = config[args.data_name]
+
+    args.data_path = os.path.join("datasets",config['filename'])
     args.to_save_path = "saved"
 
     args.use_gpu = True if torch.cuda.is_available() else False
@@ -63,7 +58,6 @@ if __name__ == '__main__':
     # args.pos_select = None
 
     args.seed = 10
-    args.config = config
 
     args.filtering = True
 
