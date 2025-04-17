@@ -11,6 +11,8 @@ from train.trainer import Trainer
 if __name__ == '__main__': 
     parser = argparse.ArgumentParser(description='Rotation-Invariant HAR Classification using Vector Neuron Network')
     parser.add_argument('-d', '--data_name', default='pamap2', type=str, help='Name of the Dataset')
+    parser.add_argument('-m', '--model_name', default='baseline_attn', type=str, help="Name of the Model") 
+    # baseline, baseline_att, sa_har, deepconvlstm_attn
 
     config_file = open('configs/data.yaml', mode='r')
     config = yaml.load(config_file, Loader=yaml.FullLoader)
@@ -26,7 +28,7 @@ if __name__ == '__main__':
     args.gpu = 0
     args.use_multi_gpu = False
 
-    args.model_name = "baseline_attn" #baseline2
+    # args.model_name = "baseline_attn" #baseline2
     args.optimizer = "Adam"
     args.criterion = "CrossEntropy"
     args.exp_mode = "LOCV"

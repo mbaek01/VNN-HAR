@@ -229,39 +229,44 @@ class adjust_learning_rate_class:
 
 def get_setting_name(args):
     config_file = open('configs/model.yaml', mode='r')
+    config = yaml.load(config_file, Loader=yaml.FullLoader)[args.model_name]
 
     if args.model_name== "baseline":
-        config = yaml.load(config_file, Loader=yaml.FullLoader)["baseline"]
         setting = "baseline_data_{}_seed_{}_windowsize_{}".format(args.data_name,
                                                                     args.seed,
                                                                     args.windowsize
                                                                     )
         return setting
     
-    if args.model_name== "baseline_attn":
-        config = yaml.load(config_file, Loader=yaml.FullLoader)["baseline_attn"]
+    elif args.model_name== "baseline_attn":
         setting = "baseline_attn_data_{}_seed_{}_windowsize_{}".format(args.data_name,
                                                                     args.seed,
                                                                     args.windowsize
                                                                     )
         return setting
     
-    if args.model_name== "vnn_mlp":
-        config = yaml.load(config_file, Loader=yaml.FullLoader)["vnn_mlp"]
+    elif args.model_name== "vnn_mlp":
         setting = "vnn_mlp_data_{}_seed_{}_windowsize_{}".format(args.data_name,
                                                                     args.seed,
                                                                     args.windowsize
                                                                     )
         return setting
     
-    if args.model_name == "deepconvlstm_attn":
-        config = yaml.load(config_file, Loader=yaml.FullLoader)["deepconvlstm_attn"]
+    
+    elif args.model_name == "deepconvlstm_attn":
         setting = "deepconvlstm_attn_data_{}_seed_{}_windowsize_{}_cvfilter_{}_lstmfilter_{}".format(args.data_name,
                                                                                                     args.seed,
                                                                                                     args.windowsize,
                                                                                                     config["nb_filters"],
                                                                                                     config["nb_units_lstm"],
                                                                                                     )
+        return setting
+    
+    elif args.model_name == "sa_har":
+        setting = "sa_har_data_{}_seed_{}_window_size_{}_num_units_{}".format(args.data_name,
+                                                                              args.seed,
+                                                                              args.windowsize,
+                                                                              config["nb_units"])
         return setting
     else:
         raise NotImplementedError

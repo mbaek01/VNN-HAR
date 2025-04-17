@@ -6,6 +6,7 @@ import yaml
 
 from models.baseline import Baseline, Baseline_Attn
 from models.vnn_mlp import VNN_MLP
+from models.sa_har import SA_HAR
 from models.deepconvlstm_attn import DeepConvLSTM_ATTN
 
 class Model(object):
@@ -60,9 +61,9 @@ class model_builder(nn.Module):
                                    #"vnleakyrelu":VLeakyReLU
                                    }
         config_file = open('./configs/model.yaml', mode='r')
+        config = yaml.load(config_file, Loader=yaml.FullLoader)[args.model_name]
 
         if args.model_name == "baseline":
-            config = yaml.load(config_file, Loader=yaml.FullLoader)['baseline']
             self.model = Baseline(int(args.input_length * args.c_in),
                                 args.num_classes,
                                 self.activation_fn_dict[args.activation_fn]
@@ -71,23 +72,26 @@ class model_builder(nn.Module):
             print("Using the Baseline model")
         
         elif args.model_name =="baseline_attn":
-            config = yaml.load(config_file, Loader=yaml.FullLoader)['baseline_attn']
             self.model = Baseline_Attn(args.c_in,
                                 args.num_classes,
                                 config["nb_units"],
                                 self.activation_fn_dict[args.activation_fn]
                                 )
+            print("Using the Baseline_Attention model")
 
         elif args.model_name == "vnn_mlp":
-            config = yaml.load(config_file, Loader=yaml.FullLoader)['vnn_mlp']
-
             self.model = VNN_MLP(args.batch_size, args.input_length, args.c_in, args.num_classes)
 
             print("Using the VNN_MLP model")
+        
+        elif args.model_name == "sa_har":
+            self.model = SA_HAR((1, args.input_length, args.c_in),
+                                args.num_classes,
+                                config)
+
+            print("Using the Self-Attention HAR model")
 
         elif args.model_name == "deepconvlstm_attn":
-            config_file = open('./configs/model.yaml', mode='r')
-            config = yaml.load(config_file, Loader=yaml.FullLoader)["deepconvlstm_attn"]
             self.model  = DeepConvLSTM_ATTN((1, args.input_length, args.c_in), 
                                             args.num_classes,
                                             # self.args.filter_scaling_factor,
