@@ -29,7 +29,7 @@ if __name__ == '__main__':
     # test predictions args
     args.model_load_name = "best_vali_2025-04-18_05-27-33"
     args.model_load_path = os.path.join(args.to_save_path , f"{args.model_load_name}.pth")
-    args.test_save_path = os.path.join(args.to_save_path, args.model_name, args.model_load_name)
+    args.test_save_path = os.path.join(args.to_save_path, args.model_name)
 
     args.use_gpu = True if torch.cuda.is_available() else False
     args.gpu = 0
