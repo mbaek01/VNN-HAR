@@ -66,6 +66,11 @@ if __name__ == '__main__':
     args.freq1 = 0.3
     args.freq2 = 25.0
 
+    model_path = os.path.join(args.to_save_path, args.model_name)
+
+    if not os.path.exist(model_path):
+        os.makedirs(model_path)
+
     # Random Seed 
     set_seed(args.seed)
     print("Random Seed: ", args.seed)
