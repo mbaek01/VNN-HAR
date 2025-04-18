@@ -5,13 +5,15 @@ import yaml
 
 from dataloaders.data_loader import PAMAP2, get_data
 from models.model import Model
-from utils import set_seed, get_setting_name
-from train.trainer import Trainer
+from utils import set_seed, get_setting_name, str2bool
+from train.trainer import Trainer, test_predictions
 
 if __name__ == '__main__': 
     parser = argparse.ArgumentParser(description='Rotation-Invariant HAR Classification using Vector Neuron Network')
     parser.add_argument('-d', '--data_name', default='pamap2', type=str, help='Name of the Dataset')
     parser.add_argument('-m', '--model_name', default='baseline_attn', type=str, help="Name of the Model") 
+    parser.add_argument('-n', '--train', default = True,  type=str2bool, help="perform training")
+    parser.add_argument('-t', '--test', default = False, type=str2bool, help='perform testing')
     # baseline, baseline_att, sa_har, deepconvlstm_attn
 
     config_file = open('configs/data.yaml', mode='r')
@@ -23,6 +25,11 @@ if __name__ == '__main__':
 
     args.data_path = os.path.join("datasets",config['filename'])
     args.to_save_path = "saved"
+
+    # test predictions args
+    args.model_load_name = "best_vali_2025-04-18_05-27-33"
+    args.model_load_path = os.path.join(args.to_save_path , f"{args.model_load_name}.pth")
+    args.test_save_path = os.path.join(args.to_save_path, args.model_name, args.model_load_name)
 
     args.use_gpu = True if torch.cuda.is_available() else False
     args.gpu = 0
@@ -70,26 +77,13 @@ if __name__ == '__main__':
 
     if not os.path.exists(model_path):
         os.makedirs(model_path)
+    
+    if not os.path.exists(args.test_save_path):
+        os.makedirs(args.test_save_path)
 
     # Random Seed 
     set_seed(args.seed)
     print("Random Seed: ", args.seed)
-
-    # Log file setting
-    setting = get_setting_name(args)
-    path = os.path.join(args.to_save_path,'logs/'+setting)
-    
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    epoch_log_file_name = os.path.join(path, "epoch_log.txt") # cv_path for cross-validation
-    score_log_file_name = os.path.join(path, "score.txt")
-
-    epoch_log = open(epoch_log_file_name, "a")
-    score_log = open(score_log_file_name, "a")
-
-    print("Epoch Log File: ", epoch_log_file_name)
-    print("Score Log File: ", score_log_file_name)
 
     # Dataset
     dataset = PAMAP2(args)
@@ -104,17 +98,38 @@ if __name__ == '__main__':
     print(f"Dataset: {args.data_name} Loaded") 
     # train_steps = len(train_loader)
 
-    # Model 
-    model = Model(args)
-    model.build_model()
+    # Perform Training
+    if args.train: 
+        # Log file setting
+        setting = get_setting_name(args)
+        path = os.path.join(args.to_save_path,'logs/'+setting)
+        
+        if not os.path.exists(path):
+            os.makedirs(path)
 
-    print("Using Model: ", args.model_name)
+        epoch_log_file_name = os.path.join(path, "epoch_log.txt") # cv_path for cross-validation
+        score_log_file_name = os.path.join(path, "score.txt")
 
-    # Initialize trainer
-    trainer = Trainer(args, model, epoch_log)
+        epoch_log = open(epoch_log_file_name, "a")
+        score_log = open(score_log_file_name, "a")
 
-    # Train the model
-    print("Training the Model...")
-    model = trainer.train(train_loader, valid_loader)
+        print("Epoch Log File: ", epoch_log_file_name)
+        print("Score Log File: ", score_log_file_name)
 
-    print("Training completed!")
+        # Model Initialization
+        model = Model(args)
+        print("Using Model: ", args.model_name)
+
+        # Trainer Initialization
+        trainer = Trainer(args, model, epoch_log)
+
+        # Training starts
+        print("Training the Model...")
+        model = trainer.train(train_loader, valid_loader)
+
+        print("Training completed!")
+
+    if args.test: 
+        print(f"Testing with Model - {args.model_load_name} of {args.model_name}")
+
+        test_predictions(args, test_loader)

@@ -40,7 +40,7 @@ class Baseline(nn.Module):
         return out
 
 class Baseline_Attn(nn.Module):
-    def __init__(self, in_dim, nb_classes,  nb_units, activation_fn):
+    def __init__(self, in_dim, nb_classes,  nb_units, activation_fn, attn_act_fn = "tanh"):
         super().__init__()
         self.nb_units = nb_units
         self.activation_fn = activation_fn()
@@ -55,7 +55,7 @@ class Baseline_Attn(nn.Module):
         self.EncoderLayer1 = EncoderLayer( d_model = self.nb_units, n_heads =4 , d_ff = self.nb_units*4)
         self.EncoderLayer2 = EncoderLayer( d_model = self.nb_units, n_heads =4 , d_ff = self.nb_units*4)
 
-        self.AttentionWithContext = AttentionWithContext(self.nb_units)
+        self.AttentionWithContext = AttentionWithContext(self.nb_units, attn_act_fn)
 
         self.fc3 = nn.Linear(self.nb_units, 4*nb_classes)
         self.dropout = nn.Dropout(p=0.2)
@@ -75,22 +75,3 @@ class Baseline_Attn(nn.Module):
         out = self.fc_out(x)
 
         return out
-
-# class Baseline_Attn(Baseline): 
-#     def __init__(self, in_dim, out_dim, activation_fn):
-#         super().__init__(in_dim, out_dim, activation_fn)
-#         self.attn = Temporal_Attention(128)
-
-#     def forward(self, x):
-#         # x = x.view(x.size(0), -1)
-#         x = x.squeeze(1)
-#         x = self.activation_fn(self.ln1(self.fc1(x)))
-#         x = self.activation_fn(self.ln2(self.fc2(x)))
-#         x = self.activation_fn(self.ln3(self.fc3(x)))
-#         x = self.activation_fn(self.ln4(self.fc4(x)))
-
-#         x = self.attn(x)
-
-#         out = self.fc5(x)  
-
-#         return out

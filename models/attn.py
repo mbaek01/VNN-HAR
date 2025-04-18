@@ -64,11 +64,18 @@ class EncoderLayer(nn.Module):
         return out2
 
 class AttentionWithContext(nn.Module):
-    def __init__(self, hidden_dim):
+    def __init__(self, hidden_dim, act_fn="tanh"):
         super(AttentionWithContext, self).__init__()
 
         self.fc1 = nn.Linear(hidden_dim, hidden_dim)
-        self.activation = nn.Tanh()
+        
+        if act_fn == "tanh":
+            self.activation = nn.Tanh() 
+        elif act_fn == "leaky_relu":
+            self.activation = nn.LeakyReLU()
+        else:
+            raise NotImplementedError
+        
         self.fc2 = nn.Linear(hidden_dim, 1, bias=False)
 
         self.dropout = nn.Dropout(0.2)

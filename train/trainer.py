@@ -1,8 +1,10 @@
+import os
 import time
 import torch
 import numpy as np
 from sklearn.metrics import f1_score, accuracy_score
 
+from models.model import Model
 from utils import EarlyStopping, adjust_learning_rate_class
 
 class Trainer:
@@ -111,3 +113,42 @@ class Trainer:
             
             self.learning_rate_adapter(self.optimizer, valid_loss)
         return self.model 
+    
+
+def test_predictions(args, test_loader):
+    model = Model(args)
+    device = model.device
+    model = model.model
+    model.load_state_dict(torch.load(args.model_load_path))
+    model.eval()
+
+    preds = []
+    trues = []
+
+    for i, (batch_x1, batch_y) in enumerate(test_loader):
+        batch_x1 = batch_x1.double().to(device)
+        batch_y = batch_y.long().to(device)
+
+        outputs = model(batch_x1)
+    
+        preds.extend(list(np.argmax(outputs.detach().cpu().numpy(),axis=1)))
+        trues.extend(list(batch_y.detach().cpu().numpy()))
+    
+    acc = accuracy_score(preds,trues)
+    f_w = f1_score(trues, preds, average='weighted')
+    f_macro = f1_score(trues, preds, average='macro')
+    f_micro = f1_score(trues, preds, average='micro')
+
+    metrics_str = (
+        f"Accuracy: {acc:.7f} | "
+        f"F1 Weighted: {f_w:.7f} | "
+        f"F1 Macro: {f_macro:.7f} | "
+        f"F1 Micro: {f_micro:.7f}"
+    )
+    print(metrics_str)
+
+    # Save to file
+    with open(os.path.join(args.test_save_path, f"{args.model_load_name}_metrics.txt"), "w") as f:
+        f.write(metrics_str)
+
+    print("Test Complete!")

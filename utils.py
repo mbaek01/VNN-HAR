@@ -1,3 +1,4 @@
+import datetime
 import numpy as np
 import pandas as pd
 import random
@@ -159,6 +160,7 @@ class EarlyStopping:
         self.early_stop = False
         self.val_loss_min = np.inf
         self.delta = delta
+        self.timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     def __call__(self, val_loss, model, path, f_macro = None, f_weighted = None, log=None):
 
@@ -188,7 +190,7 @@ class EarlyStopping:
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), path+'/'+'best_vali.pth')
+        torch.save(model.state_dict(), path+'/'+f'best_vali_{self.timestamp}.pth')
         self.val_loss_min = val_loss
 
 class adjust_learning_rate_class:
@@ -270,3 +272,8 @@ def get_setting_name(args):
         return setting
     else:
         raise NotImplementedError
+    
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    return v.lower() in ('true', '1', 't', 'yes')
