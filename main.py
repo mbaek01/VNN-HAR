@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
     model_path = os.path.join(args.to_save_path, args.model_name)
 
-    if not os.path.exist(model_path):
+    if not os.path.exists(model_path):
         os.makedirs(model_path)
 
     # Random Seed 
