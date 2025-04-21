@@ -29,7 +29,7 @@ class VN_SA_HAR(nn.Module):
         self.fc_out = nn.Linear(4*nb_classes, nb_classes)
 
     def forward(self, x):
-        x = vn_c_reshape(x, self.batch_size, self.time_length)
+        x = vn_c_reshape(x, self.time_length)
 
         x = self.vn_act(self.fc1(x))
         
@@ -38,11 +38,12 @@ class VN_SA_HAR(nn.Module):
 
         x = self.VNAttentionWithContext(x)
 
-        N = x.size(-1)
+        # N = x.size(-1)
+        batch_temp = x.size(0)
         x_mean = x.mean(dim=-1, keepdim=True).expand(x.size())
         x = torch.cat((x, x_mean), 2)
         x, trans = self.std_feature(x)
-        x = x.view(self.batch_size, -1) # x = x.view(self.batch_size, -1, N)
+        x = x.view(batch_temp, -1) # x = x.view(self.batch_size, -1, N)
         
 
         x = self.dropout(self.relu(self.fc2(x)))

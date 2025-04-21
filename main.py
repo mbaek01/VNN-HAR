@@ -32,7 +32,7 @@ if __name__ == '__main__':
     args.test_save_path = os.path.join(args.to_save_path, args.model_name)
 
     args.use_gpu = True if torch.cuda.is_available() else False
-    args.gpu = 0
+    args.gpu = 6
     args.use_multi_gpu = False
 
     # args.model_name = "baseline_attn" #baseline2

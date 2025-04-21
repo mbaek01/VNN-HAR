@@ -290,7 +290,7 @@ def str2bool(v):
         return v
     return v.lower() in ('true', '1', 't', 'yes')
 
-def vn_c_reshape(x, batch, time_length):
+def vn_c_reshape(x, time_length):
     # For PAMAP only!!
 
     # Example input: (batch, time_length, 9)
@@ -300,6 +300,7 @@ def vn_c_reshape(x, batch, time_length):
         1, 4, 7,  # y for hand, chest, ankle
         2, 5, 8   # z for hand, chest, ankle
     ]
+    batch = x.size(0)
 
     # x is your input tensor of shape (batch, 1, time_length, 9)
     x_reordered = x[:, :, :, channel_indices]  # (batch, 1, time_length, 9)
