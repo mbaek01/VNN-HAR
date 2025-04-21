@@ -13,7 +13,7 @@ class VNLinear(nn.Module):
         '''
         x: point features of shape [B, N_feat, 3, N_samples, ...]
         '''
-        x_out = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
+        # x_out = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
         x_out = self.map_to_feat(x)
         return x_out
 
@@ -31,7 +31,8 @@ class VNLeakyReLU(nn.Module):
         '''
         x: point features of shape [B, N_feat, 3, N_samples, ...]
         '''
-        d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1)
+        # d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1)
+        d = self.map_to_dir(x)
         dotprod = (x*d).sum(2, keepdim=True)
         mask = (dotprod >= 0).float()
         d_norm_sq = (d*d).sum(2, keepdim=True)
@@ -40,13 +41,16 @@ class VNLeakyReLU(nn.Module):
 
 
 class VNLinearLeakyReLU(nn.Module):
-    def __init__(self, in_channels, out_channels, dim=5, share_nonlinearity=False, negative_slope=0.2):
+    def __init__(self, in_channels, out_channels, batch_norm=False, dim=4, share_nonlinearity=False, negative_slope=0.2):
         super(VNLinearLeakyReLU, self).__init__()
+        self.batch_norm = batch_norm
         self.dim = dim
         self.negative_slope = negative_slope
         
         self.map_to_feat = nn.Linear(in_channels, out_channels, bias=False)
-        self.batchnorm = VNBatchNorm(out_channels, dim=dim)
+
+        if self.batch_norm: # error-prone
+            self.batchnorm = VNBatchNorm(out_channels, dim=dim)
         
         if share_nonlinearity == True:
             self.map_to_dir = nn.Linear(in_channels, 1, bias=False)
@@ -58,11 +62,14 @@ class VNLinearLeakyReLU(nn.Module):
         x: point features of shape [B, N_feat, 3, N_samples, ...]
         '''
         # Linear
-        p = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
+        # p = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
+        p = self.map_to_feat(x)
         # BatchNorm
-        p = self.batchnorm(p) # q
+        if self.batch_norm:
+            p = self.batchnorm(p) # q
         # LeakyReLU
-        d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1) # k
+        # d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1) # k
+        d = self.map_to_dir(x)
         dotprod = (p*d).sum(2, keepdims=True)
         mask = (dotprod >= 0).float()
         d_norm_sq = (d*d).sum(2, keepdims=True)
@@ -101,7 +108,8 @@ class VNMaxPool(nn.Module):
         '''
         x: point features of shape [B, N_feat, 3, N_samples, ...]
         '''
-        d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1)
+        # d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1)
+        d = self.map_to_dir(x)
         dotprod = (x*d).sum(2, keepdims=True)
         idx = dotprod.max(dim=-1, keepdim=False)[1]
         index_tuple = torch.meshgrid([torch.arange(j) for j in x.size()[:-1]]) + (idx,)
@@ -133,7 +141,7 @@ class VNStdFeature(nn.Module):
         z0 = x
         z0 = self.vn1(z0)
         z0 = self.vn2(z0)
-        z0 = self.vn_lin(z0.transpose(1, -1)).transpose(1, -1)
+        z0 = self.vn_lin(z0)
         
         if self.normalize_frame:
             # make z0 orthogonal. u2 = v2 - proj_u1(v2)
@@ -151,13 +159,50 @@ class VNStdFeature(nn.Module):
             u3 = torch.cross(u1, u2)
             z0 = torch.stack([u1, u2, u3], dim=1).transpose(1, 2)
         else:
-            z0 = z0.transpose(1, 2)
+            z0 = z0.transpose(1, 2) # shape :[batch, 3, 3(hidden)] to [batch, 3(hidden), 3]
         
         if self.dim == 4:
-            x_std = torch.einsum('bijm,bjkm->bikm', x, z0)
+            x_std = torch.einsum('bijm,bjkm->bikm', x, z0) # not adjusted 
         elif self.dim == 3:
-            x_std = torch.einsum('bij,bjk->bik', x, z0)
+            x_std = torch.einsum('bji,bkj->bik', x, z0) # adjusted from bij,bjk->bik
         elif self.dim == 5:
-            x_std = torch.einsum('bijmn,bjkmn->bikmn', x, z0)
+            x_std = torch.einsum('bijmn,bjkmn->bikmn', x, z0) # not adjusted
         
         return x_std, z0
+    
+
+class VNLayerNorm(nn.Module):
+    def __init__(self, d_features, eps=1e-6, affine=True, bias=False):
+        super().__init__()
+        self.eps = eps
+        self.affine = affine
+        self.bias = bias
+        if self.affine:
+            # gamma: learnable scale for each feature (D)
+            self.gamma = nn.Parameter(torch.ones(1, 1, 1, d_features))  # shape (1,1,1,D)
+        if self.bias:
+            # Not used for equivariance, but included for completeness
+            self.beta = nn.Parameter(torch.zeros(1, 1, 1, d_features))  # shape (1,1,1,D)
+
+    def forward(self, x):
+        # x: (B, L, 3, D)
+        # Compute the norm of each 3D vector (over dim=2)
+        norms = torch.norm(x, dim=2, keepdim=True)  # (B, L, 1, D)
+        
+        # Compute mean and std over D (feature dimension)
+        mean = norms.mean(dim=3, keepdim=True)      # (B, L, 1, 1)
+        std = norms.std(dim=3, keepdim=True)        # (B, L, 1, 1)
+        
+        # Normalize norms
+        normed_norms = (norms - mean) / (std + self.eps)  # (B, L, 1, D)
+
+        # Apply scale (and optional bias)
+        if self.affine:
+            normed_norms = normed_norms * self.gamma
+        if self.bias:
+            normed_norms = normed_norms + self.beta
+
+        # Rescale original vectors to have normalized norms
+        safe_norms = norms + self.eps  # avoid division by zero
+        x_normed = x / safe_norms * normed_norms  # (B, L, 3, D)
+        return x_normed

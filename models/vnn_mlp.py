@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .vn_layers import VNStdFeature, VNMaxPool, mean_pool, VNLinearLeakyReLU
+from utils import vn_c_reshape
 
 class VNN_MLP(nn.Module):
     def __init__(self, batch_size, time_length, channel, num_classes, pooling='mean'):
@@ -38,8 +39,8 @@ class VNN_MLP(nn.Module):
                 Shape(batch, length, channel)
         '''
         # Reshape: (batch, length, channel) -> (batch, channel//3, 3, length)
-        x = x.view(self.batch_size, self.time_length, self.channel//3, 3)
-        x = x.permute(0, 2, 3, 1)
+        x = vn_c_reshape(x, self.batch_size, self.time_length)
+        x = x.permute(0,2,3,1)
 
         # VN layers
         x = self.vn1(x)

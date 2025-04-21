@@ -241,11 +241,23 @@ def get_setting_name(args):
         return setting
     
     elif args.model_name== "baseline_attn":
-        setting = "baseline_attn_data_{}_seed_{}_windowsize_{}".format(args.data_name,
+        setting = "baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}".format(args.data_name,
+                                                                    config["nb_units"],
+                                                                    config["activation_fn"],
                                                                     args.seed,
                                                                     args.windowsize
                                                                     )
         return setting
+
+    elif args.model_name== "vn_sa_har":
+        setting = "vn_attn_har_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}".format(args.data_name,
+                                                                                          config["nb_units"],
+                                                                                          config["activation_fn"],
+                                                                                          args.seed,
+                                                                                          args.windowsize
+                                                                    )
+        return setting
+
     
     elif args.model_name== "vnn_mlp":
         setting = "vnn_mlp_data_{}_seed_{}_windowsize_{}".format(args.data_name,
@@ -277,3 +289,22 @@ def str2bool(v):
     if isinstance(v, bool):
         return v
     return v.lower() in ('true', '1', 't', 'yes')
+
+def vn_c_reshape(x, batch, time_length):
+    # For PAMAP only!!
+
+    # Example input: (batch, time_length, 9)
+    # Original order: [x_hand, y_hand, z_hand, x_chest, y_chest, z_chest, x_ankle, y_ankle, z_ankle]
+    channel_indices = [
+        0, 3, 6,  # x for hand, chest, ankle
+        1, 4, 7,  # y for hand, chest, ankle
+        2, 5, 8   # z for hand, chest, ankle
+    ]
+
+    # x is your input tensor of shape (batch, 1, time_length, 9)
+    x_reordered = x[:, :, :, channel_indices]  # (batch, 1, time_length, 9)
+
+    # Now reshape
+    x_reshaped = x_reordered.reshape(batch, time_length, 3, 3)
+
+    return x_reshaped

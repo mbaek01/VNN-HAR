@@ -4,10 +4,11 @@ import torch.nn as nn
 from torch import optim
 import yaml
 
-from models.baseline import Baseline, Baseline_Attn
-from models.vnn_mlp import VNN_MLP
-from models.sa_har import SA_HAR
-from models.deepconvlstm_attn import DeepConvLSTM_ATTN
+from .baseline import Baseline, Baseline_Attn
+from .vnn_mlp import VNN_MLP
+from .sa_har import SA_HAR
+from .deepconvlstm_attn import DeepConvLSTM_ATTN
+from .vn_sa_har import VN_SA_HAR
 
 class Model(object):
     def __init__(self, args):
@@ -73,11 +74,18 @@ class model_builder(nn.Module):
         
         elif args.model_name =="baseline_attn":
             self.model = Baseline_Attn(args.c_in,
-                                args.num_classes,
-                                config["nb_units"],
-                                self.activation_fn_dict[args.activation_fn]
+                                        args.num_classes,
+                                        config["nb_units"],
+                                        self.activation_fn_dict[args.activation_fn]
                                 )
             print("Using the Baseline_Attention model")
+        
+        elif args.model_name == "vn_sa_har":
+            self.model = VN_SA_HAR((args.batch_size, 1, args.input_length, args.c_in),
+                                   args.num_classes,
+                                   config["nb_units"],
+                                   config["activation_fn"]
+                                   )
 
         elif args.model_name == "vnn_mlp":
             self.model = VNN_MLP(args.batch_size, args.input_length, args.c_in, args.num_classes)
@@ -90,7 +98,7 @@ class model_builder(nn.Module):
                                 config)
 
             print("Using the Self-Attention HAR model")
-
+        
         elif args.model_name == "deepconvlstm_attn":
             self.model  = DeepConvLSTM_ATTN((1, args.input_length, args.c_in), 
                                             args.num_classes,
