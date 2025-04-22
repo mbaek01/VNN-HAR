@@ -21,7 +21,7 @@ def get_data(dataset, batch_size, flag="train"):
     return data_loader
 
 class PAMAP2(object):
-    def __init__(self, args):
+    def __init__(self, args, test_sub):
         self.args          = args
         self.data_path     = args.data_path
         self.windowsize    = args.windowsize
@@ -31,16 +31,16 @@ class PAMAP2(object):
         self.exp_mode      = args.exp_mode
         self.datanorm_type = args.datanorm_type
         self.train_vali_quote = args.train_vali_quote
-        self.LOCV_keys = [[1],[2],[3],[4],[5],[6],[7],[8],[9]]
-        self.all_keys = [1,2,3,4,5,6,7,8,9]
+        self.LOCV_keys = [[1],[2],[3],[4],[5],[6],[7],[8]] # 9 omitted
+        self.all_keys = [1,2,3,4,5,6,7,8]
 
         self.index_of_cv = 0
 
-        if self.exp_mode == "LOCV":
-            self.num_of_cv = len(self.LOCV_keys)
+        # if self.exp_mode == "LOCV":
+        #     self.num_of_cv = len(self.LOCV_keys)
 
-        else:
-            self.num_of_cv = 1
+        # else:
+        #     self.num_of_cv = 1
 
         self.used_cols = [1,# this is "label"
                             # TODO check the settings of other paper 
@@ -86,6 +86,8 @@ class PAMAP2(object):
 
         # Select which sensor columns to use
         self.sensor_filter      = ["acc", "gyro"]
+        # self.pos_filter         = ["hand", "chest", "ankle"]
+
         # self.selected_cols  = self.Sensor_filter_acoording_to_pos_and_type(args.pos_select, self.pos_filter, self.col_names[1:], "position")
         self.selected_cols  = self.Sensor_filter_acoording_to_pos_and_type(args.sensor_select, self.sensor_filter, self.col_names[1:], "Sensor Type") # self.col_names[1:] to self.selected_cols
 
@@ -97,20 +99,18 @@ class PAMAP2(object):
         self.drop_activities = [self.labelToId[i] for i in self.drop_activities]
         self.no_drop_activites = [item for item in self.all_labels if item not in self.drop_activities]
 
-        # self.pos_filter         = ["hand", "chest", "ankle"]
-        # self.sensor_filter      = ["acc", "gyro"]
-
         self.file_encoding = {'subject101.dat':1, 'subject102.dat':2, 'subject103.dat':3, 
                             'subject104.dat':4, 'subject105.dat':5, 'subject106.dat':6,
-                            'subject107.dat':7, 'subject108.dat':8, 'subject109.dat':9} 
+                            'subject107.dat':7, 'subject108.dat':8 } # 'subject109.dat':9 - not used
 
         # 'subject101.dat', 'subject102.dat', 'subject103.dat',  'subject104.dat', 
         # 'subject105.dat', 'subject107.dat', 'subject108.dat', 'subject109.dat'
-        self.train_keys   = [1,2,3,4,5,7,8,9]
-        self.vali_keys    = []
+
+        # subjects except the test_sub
+        self.train_keys   = [i for i in range(self.all_keys[0], self.all_keys[-1]+1) if i != test_sub]
 
         # 'subject106.dat'
-        self.test_keys    = [6]
+        self.test_keys    = [test_sub]
 
         self.sub_ids_of_each_sub = {}
 
@@ -121,7 +121,7 @@ class PAMAP2(object):
         if self.args.filtering:
             self.data_x = self.Sensor_data_noise_grav_filtering(self.data_x.set_index('sub_id').copy())
 
-        # sliding window index
+        # sliding window indexing
         self.train_slidingwindows = self.get_the_sliding_index(self.data_x.copy(), self.data_y.copy(), "train")
         self.test_slidingwindows  = self.get_the_sliding_index(self.data_x.copy(), self.data_y.copy(), "test")
 
@@ -132,6 +132,8 @@ class PAMAP2(object):
         
         df_dict = {}
         for file in file_list:
+            if file == 'subject109.dat': continue
+            
             sub_data = pd.read_table(os.path.join(data_path,file), header=None, sep='\s+')
             sub_data = sub_data.iloc[:,self.used_cols]
             sub_data.columns = self.col_names
@@ -149,10 +151,10 @@ class PAMAP2(object):
 
         df_all = pd.concat(df_dict)
 
-        # Downsampling
+        # Downsampling - Not used
         df_all.reset_index(drop=True,inplace=True)
-        index_list = list(np.arange(0,df_all.shape[0],3))
-        df_all = df_all.iloc[index_list]
+        # index_list = list(np.arange(0,df_all.shape[0],3))
+        # df_all = df_all.iloc[index_list]
 
         df_all = df_all.set_index('sub_id')
 
@@ -249,6 +251,7 @@ class PAMAP2(object):
             #     pickle.dump(train_vali_window_index, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         random.shuffle(train_vali_window_index)
+        # train valid split
         self.train_window_index = train_vali_window_index[:int(self.train_vali_quote*len(train_vali_window_index))]
         self.vali_window_index = train_vali_window_index[int(self.train_vali_quote*len(train_vali_window_index)):]
 

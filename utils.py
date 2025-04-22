@@ -160,7 +160,6 @@ class EarlyStopping:
         self.early_stop = False
         self.val_loss_min = np.inf
         self.delta = delta
-        self.timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     def __call__(self, val_loss, model, path, f_macro = None, f_weighted = None, log=None):
 
@@ -190,7 +189,7 @@ class EarlyStopping:
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), path+'/'+f'best_vali_{self.timestamp}.pth')
+        torch.save(model.state_dict(), path+'/'+f'best_vali.pth')
         self.val_loss_min = val_loss
 
 class adjust_learning_rate_class:
@@ -234,62 +233,69 @@ def get_setting_name(args):
     config = yaml.load(config_file, Loader=yaml.FullLoader)[args.model_name]
 
     if args.model_name== "baseline":
-        setting = "baseline_data_{}_seed_{}_windowsize_{}".format(args.data_name,
-                                                                    args.seed,
-                                                                    args.windowsize
-                                                                    )
+        setting = "baseline_data_{}_seed_{}_windowsize_{}_{}".format(
+            args.data_name,
+            args.seed,
+            args.windowsize,
+            args.timestamp
+            )
         return setting
     
     elif args.model_name== "baseline_attn":
-        setting = "baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}".format(args.data_name,
-                                                                    config["nb_units"],
-                                                                    config["activation_fn"],
-                                                                    args.seed,
-                                                                    args.windowsize
-                                                                    )
+        setting = "baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
+            args.data_name,
+            config["nb_units"],
+            config["activation_fn"],
+            args.seed,
+            args.windowsize,
+            args.timestamp
+            )
         return setting
 
     elif args.model_name== "vn_sa_har":
-        setting = "vn_attn_har_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}".format(args.data_name,
-                                                                                          config["nb_units"],
-                                                                                          config["activation_fn"],
-                                                                                          args.seed,
-                                                                                          args.windowsize
-                                                                    )
+        setting = "vn_attn_har_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
+            args.data_name,
+            config["nb_units"],
+            config["activation_fn"],
+            args.seed,
+            args.windowsize,
+            args.timestamp
+            )
         return setting
 
     
     elif args.model_name== "vnn_mlp":
-        setting = "vnn_mlp_data_{}_seed_{}_windowsize_{}".format(args.data_name,
-                                                                    args.seed,
-                                                                    args.windowsize
-                                                                    )
+        setting = "vnn_mlp_data_{}_seed_{}_windowsize_{}_{}".format(
+            args.data_name,
+            args.seed,
+            args.windowsize
+            )
         return setting
     
     
     elif args.model_name == "deepconvlstm_attn":
-        setting = "deepconvlstm_attn_data_{}_seed_{}_windowsize_{}_cvfilter_{}_lstmfilter_{}".format(args.data_name,
-                                                                                                    args.seed,
-                                                                                                    args.windowsize,
-                                                                                                    config["nb_filters"],
-                                                                                                    config["nb_units_lstm"],
-                                                                                                    )
+        setting = "deepconvlstm_attn_data_{}_seed_{}_windowsize_{}_cvfilter_{}_lstmfilter_{}_{}".format(
+            args.data_name,
+            args.seed,
+            args.windowsize,
+            config["nb_filters"],
+            config["nb_units_lstm"],
+            args.timestamp
+            )
         return setting
     
     elif args.model_name == "sa_har":
-        setting = "sa_har_data_{}_seed_{}_window_size_{}_num_units_{}".format(args.data_name,
-                                                                              args.seed,
-                                                                              args.windowsize,
-                                                                              config["nb_units"])
+        setting = "sa_har_data_{}_seed_{}_window_size_{}_num_units_{}_{}".format(
+            args.data_name,
+            args.seed,
+            args.windowsize,
+            config["nb_units"],
+            args.timestamp
+            )
         return setting
     else:
         raise NotImplementedError
     
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    return v.lower() in ('true', '1', 't', 'yes')
-
 def vn_c_reshape(x, time_length):
     # For PAMAP only!!
 

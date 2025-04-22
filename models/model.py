@@ -104,7 +104,7 @@ class model_builder(nn.Module):
                                             args.num_classes,
                                             # self.args.filter_scaling_factor,
                                             config)
-            print("Build the deepconvlstm_attn model!")
+            print("Using the deepconvlstm_attn model")
 
         else:
             raise NotImplementedError
