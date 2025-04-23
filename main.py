@@ -47,8 +47,6 @@ if __name__ == '__main__':
 
     # testing each subject as test subject 
     for test_sub in range(1,9):
-        # args.test_sub = test_sub
-
         # updates the test subject for cross validation
         dataset.update_train_val_test_keys()
         print(f"Using subject {dataset.index_of_cv} as a test subject")
@@ -66,7 +64,6 @@ if __name__ == '__main__':
         if args.train: 
             # Model Initialization
             model = Model(args)
-            print("Using Model: ", args.model_name)
 
             # Trainer Initialization
             trainer = Trainer(args, model, curr_save_path)
