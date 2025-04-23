@@ -21,7 +21,7 @@ def get_data(dataset, batch_size, flag="train"):
     return data_loader
 
 class PAMAP2(object):
-    def __init__(self, args, test_sub):
+    def __init__(self, args):
         self.args          = args
         self.data_path     = args.data_path
         self.windowsize    = args.windowsize
@@ -107,10 +107,10 @@ class PAMAP2(object):
         # 'subject105.dat', 'subject107.dat', 'subject108.dat', 'subject109.dat'
 
         # subjects except the test_sub
-        self.train_keys   = [i for i in range(self.all_keys[0], self.all_keys[-1]+1) if i != test_sub]
+        # self.train_keys   = [i for i in range(self.all_keys[0], self.all_keys[-1]+1) if i != self.args.test_sub]
 
-        # 'subject106.dat'
-        self.test_keys    = [test_sub]
+        # # 'subject106.dat'
+        # self.test_keys    = [self.args.test_sub]
 
         self.sub_ids_of_each_sub = {}
 
@@ -153,8 +153,8 @@ class PAMAP2(object):
 
         # Downsampling - Not used
         df_all.reset_index(drop=True,inplace=True)
-        # index_list = list(np.arange(0,df_all.shape[0],3))
-        # df_all = df_all.iloc[index_list]
+        index_list = list(np.arange(0,df_all.shape[0],3))
+        df_all = df_all.iloc[index_list]
 
         df_all = df_all.set_index('sub_id')
 

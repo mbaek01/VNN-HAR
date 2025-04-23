@@ -15,9 +15,10 @@ class Trainer:
         self.criterion = model.select_criterion().to(self.device)
         self.optimizer = model.select_optimizer()
 
-        self.curr_save_path = os.path.join(curr_save_path, args.test_sub)
-        self.epoch_log = open(os.path.join(curr_save_path, "epoch_log.txt") , "a")
-        self.score_log = open(os.path.join(curr_save_path, "score.txt"), "a")
+        self.curr_save_path = curr_save_path
+        self.epoch_log_file_name = os.path.join(self.curr_save_path, "epoch_log.txt")
+        
+        self.epoch_log = open(self.epoch_log_file_name, "a")
         self.epochs = args.train_epochs
 
         self.early_stopping = EarlyStopping(patience=args.early_stop_patience, verbose=True)
@@ -81,7 +82,6 @@ class Trainer:
 
     def train(self, train_loader, valid_loader):
         print("Epoch Log File: ", self.epoch_log_file_name)
-        print("Score Log File: ", self.score_log_file_name)
     
         for epoch in range(self.epochs):
             train_loss, epoch_time = self.train_epoch(train_loader)
@@ -122,11 +122,17 @@ class Trainer:
         return self.model 
 
 
-def test_predictions(args, test_loader, curr_save_path, test_sub):
+def test_predictions(args, test_loader, curr_save_path, score_log):
+    # Load model 
+    model_path = os.path.join(curr_save_path, "model.pth")
+
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"The model: '{model_path}' does not exist.")
+
     model = Model(args)
     device = model.device
     model = model.model
-    model.load_state_dict(torch.load(args.model_load_path))
+    model.load_state_dict(torch.load(model_path))
     model.eval()
 
     preds = []
@@ -147,16 +153,15 @@ def test_predictions(args, test_loader, curr_save_path, test_sub):
     f_micro = f1_score(trues, preds, average='micro')
 
     metrics_str = (
+        f"Model: {model_path} | "
         f"Accuracy: {acc:.7f} | "
         f"F1 Weighted: {f_w:.7f} | "
         f"F1 Macro: {f_macro:.7f} | "
-        f"F1 Micro: {f_micro:.7f}"
+        f"F1 Micro: {f_micro:.7f} \n"
     )
     print(metrics_str)
 
-    # Save to file
-    with open(os.path.join(args.test_save_path, f"{args.model_load_name}_metrics.txt"), "w") as f:
-        f.write(metrics_str)
+    score_log.write(metrics_str, "\n")
 
     print("Test Complete!")
 

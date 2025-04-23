@@ -1,8 +1,6 @@
-import argparse
 import os
 import datetime
-import torch
-import yaml
+import numpy as np
 
 from configs.config import get_args
 from dataloaders.data_loader import PAMAP2, get_data
@@ -37,21 +35,32 @@ if __name__ == '__main__':
     if not os.path.exists(curr_save_path):
         os.makedirs(curr_save_path)
 
+    # for test performance aggregation (if args.test==True)
+    acc_list = []
+    f_w_list = []
+    f_macro_list = []
+    f_micro_list = []
+
+    # Dataset
+    dataset = PAMAP2(args)
+    print(f"Dataset: {args.data_name} Loaded") 
+
     # testing each subject as test subject 
     for test_sub in range(1,9):
-        args.test_sub = test_sub
+        # args.test_sub = test_sub
 
-        # Dataset
-        dataset = PAMAP2(args, test_sub)
-
-        # TODO: cross-validation from here on 
+        # updates the test subject for cross validation
         dataset.update_train_val_test_keys()
+        print(f"Using subject {dataset.index_of_cv} as a test subject")
+
+        # curr_save_path = model_name/(test_subject_num)
+        curr_save_path = os.path.join(curr_save_path, str(dataset.index_of_cv))
+        if not os.path.exists(curr_save_path):
+            os.makedirs(curr_save_path)
 
         train_loader = get_data(dataset, args.batch_size, flag = "train")
         valid_loader = get_data(dataset, args.batch_size, flag = "valid")
-        test_loader = get_data(dataset, args.batch_size, flag = "test") # sub_id = test_sub 
-
-        print(f"Dataset: {args.data_name} Loaded") 
+        test_loader = get_data(dataset, args.batch_size, flag = "test") 
 
         # Perform Training
         if args.train: 
@@ -68,10 +77,26 @@ if __name__ == '__main__':
 
             print("Training completed!")
 
+        # TODO: separate training and testing process into different for loops of subjects
         if args.test: 
-            print(f"Testing with Model - {args.model_load_name} of {args.model_name} | test subject: {test_sub}")
+            print(f"Testing with Model - {args.model_load_name} of {args.model_name} | test subject: {dataset.index_of_cv}")
 
-            acc, f_w, f_macro, f_micro = test_predictions(args, test_loader, curr_save_path, test_sub)
-            
+            # Log setting for the test performance
+            score_log_file_path = os.path.join(curr_save_path, "score.txt")            
+            score_log = open(os.path.join(curr_save_path, "score.txt"), "a")
 
-            
+            print("Score Log File: ", score_log_file_path)
+
+            acc, f_w, f_macro, f_micro = test_predictions(args, test_loader, curr_save_path, score_log)
+
+            acc_list.append(acc)
+            f_w_list.append(f_w)
+            f_macro_list.append(f_macro)
+            f_micro_list.append(f_micro)
+
+            if test_sub == 8: 
+                score_log.write(f"Model: curr_save_path \n"
+                                f"Accuracy: mean={np.mean(acc_list):.7f}, std={np.std(acc_list):.7f}\n"
+                                f"F1 Weighted: mean={np.mean(f_w_list):.7f}, std={np.std(f_w_list):.7f}\n"
+                                f"F1 Macro: mean={np.mean(f_macro_list):.7f}, std={np.std(f_macro_list):.7f}\n"
+                                f"F1 Micro: mean={np.mean(f_micro_list):.7f}, std={np.std(f_micro_list):.7f}\n")
