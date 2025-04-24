@@ -7,6 +7,7 @@ import yaml
 from .baseline import Baseline, Baseline_Attn
 from .vnn_mlp import VNN_MLP
 from .sa_har import SA_HAR
+from .deepconvlstm import DeepConvLSTM
 from .deepconvlstm_attn import DeepConvLSTM_ATTN
 from .vn_sa_har import VN_SA_HAR
 
@@ -99,8 +100,13 @@ class model_builder(nn.Module):
 
             print("Using the Self-Attention HAR model")
         
+        elif args.model_name == "deepconvlstm":
+            self.model = DeepConvLSTM((1, args.input_length, args.c_in),
+                                      args.num_classes,
+                                      config)
+        
         elif args.model_name == "deepconvlstm_attn":
-            self.model  = DeepConvLSTM_ATTN((1, args.input_length, args.c_in), 
+            self.model = DeepConvLSTM_ATTN((1, args.input_length, args.c_in), 
                                             args.num_classes,
                                             # self.args.filter_scaling_factor,
                                             config)

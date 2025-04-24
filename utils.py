@@ -271,7 +271,17 @@ def get_setting_name(args):
             args.windowsize
             )
         return setting
-    
+
+    elif args.model_name == "deepconvlstm":
+        setting = "deepconvlstm_attn_data_{}_seed_{}_windowsize_{}_cvfilter_{}_lstmfilter_{}_{}".format(
+            args.data_name,
+            args.seed,
+            args.windowsize,
+            config["nb_filters"],
+            config["nb_units_lstm"],
+            args.timestamp
+            )
+        return setting
     
     elif args.model_name == "deepconvlstm_attn":
         setting = "deepconvlstm_attn_data_{}_seed_{}_windowsize_{}_cvfilter_{}_lstmfilter_{}_{}".format(

@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 class ConvBlock(nn.Module):
     """
     Normal convolution block
@@ -15,9 +14,9 @@ class ConvBlock(nn.Module):
         self.dilation = dilation
         self.batch_norm = batch_norm
 
-        self.conv1 = nn.Conv2d(self.input_filters, self.nb_filters, (self.filter_width, 1))
+        self.conv1 = nn.Conv2d(self.input_filters, self.nb_filters, (self.filter_width, 1), dilation=(self.dilation, 1))
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(self.nb_filters, self.nb_filters, (self.filter_width, 1), stride=(2,1))
+        self.conv2 = nn.Conv2d(self.nb_filters, self.nb_filters, (self.filter_width, 1), dilation=(self.dilation, 1), stride=(2,1))
         if self.batch_norm:
             self.norm1 = nn.BatchNorm2d(self.nb_filters)
             self.norm2 = nn.BatchNorm2d(self.nb_filters)
@@ -36,37 +35,37 @@ class ConvBlock(nn.Module):
         return out
 
 
-class DeepConvLSTM_ATTN(nn.Module):
+class DeepConvLSTM(nn.Module):
     def __init__(self, 
                  input_shape, 
                  nb_classes,
                 #  filter_scaling_factor,
                  config):
-                 #nb_conv_blocks        = 2,
-                 #nb_filters            = 64,
-                 #dilation              = 1,
-                 #batch_norm            = False,
-                 #filter_width          = 5,
-                 #nb_layers_lstm        = 2,
-                 #drop_prob             = 0.5,
-                 #nb_units_lstm         = 128):
+                 #nb_conv_blocks         = 2,
+                 #nb_filters             = 64,
+                 #dilation               = 1,
+                 #batch_norm             = False,
+                 #filter_width           = 5,
+                 #nb_layers_lstm         = 1,
+                 #drop_prob              = 0.5,
+                 #nb_units_lstm          = 128):
         """
         DeepConvLSTM model based on architecture suggested by Ordonez and Roggen (https://www.mdpi.com/1424-8220/16/1/115)
         
         """
-        super(DeepConvLSTM_ATTN, self).__init__()
+        super(DeepConvLSTM, self).__init__()
         self.nb_conv_blocks = config["nb_conv_blocks"]
-        self.nb_filters     = int(config["nb_filters"]) #*filter_scaling_factor)
+        self.nb_filters     = int(config["nb_filters"])
         self.dilation       = 1 # config["dilation"]
         self.batch_norm     = bool(config["batch_norm"])
         self.filter_width   = config["filter_width"]
         self.nb_layers_lstm = config["nb_layers_lstm"]
         self.drop_prob      = config["drop_prob"]
-        self.nb_units_lstm  = int(config["nb_units_lstm"]) #*filter_scaling_factor)
+        self.nb_units_lstm  = int(config["nb_units_lstm"])
         
         
-        self.nb_channels = input_shape[2]
-        self.nb_classes = nb_classes
+        self.nb_channels    = input_shape[2]
+        self.nb_classes     = nb_classes
 
     
         self.conv_blocks = []
@@ -93,12 +92,6 @@ class DeepConvLSTM_ATTN(nn.Module):
         
         # define dropout layer
         self.dropout = nn.Dropout(self.drop_prob)
-        
-        # attention
-        self.linear_1 = nn.Linear(self.nb_units_lstm, self.nb_units_lstm)
-        self.tanh = nn.Tanh()
-        self.dropout_2 = nn.Dropout(0.2)
-        self.linear_2 = nn.Linear(self.nb_units_lstm, 1, bias=False)
         # define classifier
         self.fc = nn.Linear(self.nb_units_lstm, self.nb_classes)
 
@@ -109,12 +102,10 @@ class DeepConvLSTM_ATTN(nn.Module):
 
         for i, conv_block in enumerate(self.conv_blocks):
             x = conv_block(x)
-
         final_seq_len = x.shape[2]
 
         # permute dimensions and reshape for LSTM
         x = x.permute(0, 2, 1, 3)
-
         x = x.reshape(-1, final_seq_len, self.nb_filters * self.nb_channels)
 
         x = self.dropout(x)
@@ -122,21 +113,14 @@ class DeepConvLSTM_ATTN(nn.Module):
 
         for lstm_layer in self.lstm_layers:
             x, _ = lstm_layer(x)
+            
+
+        x = x[:, -1, :]
     
-        # attention - shape: [batch_size, sequence_length, hidden_dim]
-        context = x[:, :-1, :]
-        out = x[:, -1, :]
-
-        uit = self.linear_1(context)
-        uit = self.tanh(uit)
-        uit = self.dropout_2(uit)
-        ait = self.linear_2(uit)
-        attn = torch.matmul(F.softmax(ait, dim=1).transpose(-1, -2),context).squeeze(-2)
-
-        out = self.fc(out+attn)
+        x = self.fc(x)
 
 
-        return out
+        return x
 
     def number_of_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

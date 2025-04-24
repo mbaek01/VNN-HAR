@@ -26,10 +26,12 @@ if __name__ == '__main__':
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
-    else: # if only args.test == True, need to specify the folder of the testing models
-        save_path = "/workspaces/VNN-HAR/saved/baseline_data_pamap2_seed_10_windowsize_168_2025-04-24_05-14-01"
-    
+    else: 
+        save_path = args.test_path
 
+        if save_path == "":
+            raise ValueError("Missing required argument: args.test_path")
+    
     # for test performance aggregation (if args.test==True)
     acc_list = []
     f_w_list = []

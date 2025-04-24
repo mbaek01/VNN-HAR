@@ -153,8 +153,8 @@ class PAMAP2(object):
 
         # Downsampling - Not used
         df_all.reset_index(drop=True,inplace=True)
-        # index_list = list(np.arange(0,df_all.shape[0],3))
-        # df_all = df_all.iloc[index_list]
+        index_list = list(np.arange(0,df_all.shape[0],3))
+        df_all = df_all.iloc[index_list]
 
         df_all = df_all.set_index('sub_id')
 

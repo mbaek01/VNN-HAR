@@ -51,9 +51,7 @@ class SensorAttention(nn.Module):
         input: [batch  * length * channel]
         output: [batch, 1, length, d]
         '''
-        # layer norm 在最后一个维度，  原文是在feature上
         inputs = self.ln(inputs)               
-        # 增加 维度， tensorflow 是在最后一个维度上加， torch是第一个
         x = inputs.unsqueeze(1)                
         # b 1 L C
         x = self.conv_1(x)              
@@ -100,7 +98,7 @@ class SA_HAR(nn.Module):
         
         self.dropout = nn.Dropout(p=0.2)
 
-        self.fc_out = nn.Linear(4*nb_classes, nb_classes)      # 从d_dim到6classes, 取72是论文中说的4倍classes数（4*18）
+        self.fc_out = nn.Linear(4*nb_classes, nb_classes)      
 
     
     def forward(self,x): 

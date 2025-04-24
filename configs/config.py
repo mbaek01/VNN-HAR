@@ -33,10 +33,8 @@ def get_args():
     args.data_path = os.path.join("datasets", config['filename'])
     args.to_save_path = "saved"
 
-    # # test predictions args
-    # args.model_load_name = "best_vali_2025-04-18_05-27-33"
-    # args.model_load_path = os.path.join(args.to_save_path, f"{args.model_load_name}.pth")
-    # args.test_save_path = os.path.join(args.to_save_path, args.model_name)
+    # if only args.test == True, need to specify the folder of the testing models
+    args.test_path = ""
 
     args.use_gpu = True if torch.cuda.is_available() else False
     # args.gpu = 7
