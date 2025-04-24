@@ -81,7 +81,7 @@ class model_builder(nn.Module):
             print("Using the Baseline_Attention model")
         
         elif args.model_name == "vn_sa_har":
-            self.model = VN_SA_HAR((args.batch_size, 1, args.input_length, args.c_in),
+            self.model = VN_SA_HAR((args.batch_size, 1, args.input_length, args.c_in), # TODO: remove 1 if not needed
                                    args.num_classes,
                                    config["nb_units"],
                                    config["activation_fn"]

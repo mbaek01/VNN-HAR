@@ -122,9 +122,9 @@ class Trainer:
         return self.model 
 
 
-def test_predictions(args, test_loader, curr_save_path, score_log):
+def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
     # Load model 
-    model_path = os.path.join(curr_save_path, "model.pth")
+    model_path = os.path.join(curr_save_path, "best_vali.pth")
 
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"The model: '{model_path}' does not exist.")
@@ -153,7 +153,7 @@ def test_predictions(args, test_loader, curr_save_path, score_log):
     f_micro = f1_score(trues, preds, average='micro')
 
     metrics_str = (
-        f"Model: {model_path} | "
+        f"Model: {model_path} | test subject: {test_sub} \n"
         f"Accuracy: {acc:.7f} | "
         f"F1 Weighted: {f_w:.7f} | "
         f"F1 Macro: {f_macro:.7f} | "
@@ -161,7 +161,8 @@ def test_predictions(args, test_loader, curr_save_path, score_log):
     )
     print(metrics_str)
 
-    score_log.write(metrics_str, "\n")
+    score_log.write(metrics_str)
+    score_log.flush()
 
     print("Test Complete!")
 

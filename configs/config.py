@@ -21,7 +21,8 @@ def get_args():
     parser.add_argument('-m', '--model_name', default='baseline_attn', type=str, help="Name of the Model") 
     
     parser.add_argument('-n', '--train', default=True,  type=str2bool, help="perform training")
-    parser.add_argument('-t', '--test', default=False, type=str2bool, help='perform testing')
+    parser.add_argument('-t', '--test', default=True, type=str2bool, help='perform testing')
+    parser.add_argument('-g', '--gpu', default=0, type=int, help="gpu index number")
 
     args = parser.parse_args()
 
@@ -38,8 +39,9 @@ def get_args():
     # args.test_save_path = os.path.join(args.to_save_path, args.model_name)
 
     args.use_gpu = True if torch.cuda.is_available() else False
-    args.gpu = 6
-    args.use_multi_gpu = False
+    # args.gpu = 7
+    args.use_multi_gpu = True
+    args.devices = "0,1,2,3,4,5,6,7" # available gpus
 
     args.optimizer = "Adam"
     args.criterion = "CrossEntropy"
