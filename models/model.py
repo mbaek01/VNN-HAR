@@ -9,7 +9,7 @@ from .vnn_mlp import VNN_MLP
 from .sa_har import SA_HAR
 from .deepconvlstm import DeepConvLSTM
 from .deepconvlstm_attn import DeepConvLSTM_ATTN
-from .vn_sa_har import VN_SA_HAR
+from .vn_baseline_attn import VN_Baseline_Attn
 
 class Model(object):
     def __init__(self, args):
@@ -57,13 +57,14 @@ class Model(object):
 class model_builder(nn.Module):
     def __init__(self, args):
         super(model_builder, self).__init__()
-        # self.args = args
         self.activation_fn_dict = {"relu":nn.ReLU, 
                                    "leakyrelu":nn.LeakyReLU, 
                                    #"vnleakyrelu":VLeakyReLU
                                    }
         config_file = open('./configs/model.yaml', mode='r')
         config = yaml.load(config_file, Loader=yaml.FullLoader)[args.model_name]
+
+        # input shape for all models: (B, 1, L, C)
 
         if args.model_name == "baseline":
             self.model = Baseline(int(args.input_length * args.c_in),
@@ -81,8 +82,8 @@ class model_builder(nn.Module):
                                 )
             print("Using the Baseline_Attention model")
         
-        elif args.model_name == "vn_sa_har":
-            self.model = VN_SA_HAR((args.batch_size, 1, args.input_length, args.c_in), # TODO: remove 1 if not needed
+        elif args.model_name == "vn_baseline_attn":
+            self.model = VN_Baseline_Attn((args.batch_size, 1, args.input_length, args.c_in), # TODO: remove 1 if not needed
                                    args.num_classes,
                                    config["nb_units"],
                                    config["activation_fn"]

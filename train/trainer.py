@@ -110,6 +110,7 @@ class Trainer:
                                 f"Valid macro F1: {valid_f_macro:.7f}, "
                                 f"Valid micro F1: {valid_f_micro:.7f} \n")
 
+            # Early stopping
             self.early_stopping(valid_loss, self.model, self.curr_save_path, valid_f_macro, valid_f_w, self.epoch_log)
             if self.early_stopping.early_stop:
                 print("Early stopping")
@@ -118,6 +119,7 @@ class Trainer:
             self.epoch_log.write("----------------------------------------------------------------------------------------\n")
             self.epoch_log.flush()
             
+            # Learning rate adapter
             self.learning_rate_adapter(self.optimizer, valid_loss)
         return self.model 
 
@@ -138,6 +140,7 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
     preds = []
     trues = []
 
+    # Testing phase
     for i, (batch_x1, batch_y) in enumerate(test_loader):
         batch_x1 = batch_x1.double().to(device)
         batch_y = batch_y.long().to(device)
@@ -161,6 +164,7 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
     )
     print(metrics_str)
 
+    # Test log
     score_log.write(metrics_str)
     score_log.flush()
 

@@ -56,10 +56,13 @@ class EncoderLayer(nn.Module):
         attn_output, attn = self.attention( x, x, x )
         attn_output = self.dropout1(attn_output)
         out1  = self.layernorm1(x + attn_output)
+        # Shape: (B, L, C); C = nb_units = d_model
 
         ffn_output = self.ffn2(self.relu(self.ffn1(out1)))
+        # Shape: (B, L, d_ff) -> (B, L, d_model)
         ffn_output = self.dropout2(ffn_output)
         out2 =  self.layernorm2(out1 + ffn_output)
+        # Shape: (B, L, d_model)
 
         return out2
 
@@ -67,7 +70,7 @@ class AttentionWithContext(nn.Module):
     def __init__(self, hidden_dim, act_fn="tanh"):
         super(AttentionWithContext, self).__init__()
 
-        self.fc1 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc1 = nn.Linear(hidden_dim, hidden_dim) # hidden_dim = nb_units
         
         if act_fn == "tanh":
             self.activation = nn.Tanh() 
@@ -84,11 +87,16 @@ class AttentionWithContext(nn.Module):
         # context = x[:, :-1, :]
         # last = x[:, -1, :]
 
+        # x shape: (B, L, C); C = nb_units
         uit = self.activation(self.fc1(x))
-        ait = self.fc2(uit) 
+        # uit shape: (B, L, C) C = nb_units
+        ait = self.fc2(uit)
+        # ait shape: (B, L, 1) 
 
         attn_weights = F.softmax(ait, dim=1).transpose(-1, -2)
+        # (B, 1, L)
         out = torch.matmul(attn_weights, x).squeeze(-2) # + last 
+        # (B, C); C = nb_units
         # can also do fc(out) here
         return out
 

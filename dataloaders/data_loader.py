@@ -151,10 +151,10 @@ class PAMAP2(object):
 
         df_all = pd.concat(df_dict)
 
-        # Downsampling - Not used
+        # Downsampling - 99hz to 33hz
         df_all.reset_index(drop=True,inplace=True)
-        # index_list = list(np.arange(0,df_all.shape[0],3))
-        # df_all = df_all.iloc[index_list]
+        index_list = list(np.arange(0,df_all.shape[0],3))
+        df_all = df_all.iloc[index_list]
 
         df_all = df_all.set_index('sub_id')
 

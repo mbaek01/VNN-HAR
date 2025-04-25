@@ -17,7 +17,11 @@ def get_args():
     parser = argparse.ArgumentParser(description='Rotation-Invariant HAR Classification using Vector Neuron Network')
     parser.add_argument('-d', '--data_name', default='pamap2', type=str, help='Name of the Dataset')
 
-    # Available Models: baseline_attn, deepconvlstm_attn,
+    # Available Models: baseline_attn, 
+    #                   vn_baseline_attn 
+    #                   deepconvlstm_attn,
+    #                   deepconvlstm,
+    #                   sa_har
     parser.add_argument('-m', '--model_name', default='baseline_attn', type=str, help="Name of the Model") 
     
     parser.add_argument('-n', '--train', default=True,  type=str2bool, help="perform training")
@@ -37,7 +41,6 @@ def get_args():
     args.test_path = ""
 
     args.use_gpu = True if torch.cuda.is_available() else False
-    # args.gpu = 7
     args.use_multi_gpu = True
     args.devices = "0,1,2,3,4,5,6,7" # available gpus
 

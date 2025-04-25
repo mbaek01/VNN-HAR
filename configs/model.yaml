@@ -7,7 +7,7 @@ baseline_attn:
   nb_units: 128
   activation_fn: relu
 
-vn_sa_har:
+vn_baseline_attn:
   nb_units: 120 # 120 // 3 has to be multiple sof num_head(=4) in attn 
   activation_fn: vn_leaky_relu
   

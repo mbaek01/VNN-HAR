@@ -87,7 +87,7 @@ if __name__ == '__main__':
             f_macro_list.append(f_macro)
             f_micro_list.append(f_micro)
 
-            # final mean and std of models
+            # Final mean and std of models
             if test_sub == 8: 
                 score_log.write(f"\n Model: {save_path} \n"
                                 f"Accuracy: mean={np.mean(acc_list):.7f}, std={np.std(acc_list):.7f}\n"

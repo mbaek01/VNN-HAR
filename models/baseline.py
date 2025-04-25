@@ -63,15 +63,21 @@ class Baseline_Attn(nn.Module):
 
     def forward(self, x):
         x = self.activation_fn(self.fc1(x))
-        # x = self.activation_fn(self.fc2(x)) # Shape: (batch, 1, time_length, channel)
+        # Shape: (B, 1, L, C); C = nb_units
+        # x = self.activation_fn(self.fc2(x)) 
 
         x = x.squeeze(1)
+        # Shape: (B, L, C)
         x = self.EncoderLayer1(x)
         x = self.EncoderLayer2(x)
+        # Shape: (B, 1, L, C); C = nb_units
 
         x = self.AttentionWithContext(x)
+        # Shape: (B, C); C = nb_units
 
         x = self.dropout(self.relu(self.fc3(x)))
-        out = self.fc_out(x)
+        # Shape: (B, C) ; C = 4*nb_classes
 
+        out = self.fc_out(x)
+        # Shape: (B, C); C = nb_classes
         return out

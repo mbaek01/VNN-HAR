@@ -252,8 +252,8 @@ def get_setting_name(args):
             )
         return setting
 
-    elif args.model_name== "vn_sa_har":
-        setting = "vn_attn_har_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
+    elif args.model_name== "vn_baseline_attn":
+        setting = "vn_baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
             args.data_name,
             config["nb_units"],
             config["activation_fn"],
