@@ -46,7 +46,7 @@ if __name__ == '__main__':
     for test_sub in range(1,9):
         # updates the test subject for cross validation
         dataset.update_train_val_test_keys()
-        print(f"Using subject {dataset.index_of_cv} as a test subject")
+        print(f"Test Subject: {dataset.index_of_cv}")
 
         # curr_save_path = model_name/(test_subject_num)
         curr_save_path = os.path.join(save_path, str(dataset.index_of_cv))

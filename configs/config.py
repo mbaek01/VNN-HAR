@@ -46,7 +46,7 @@ def get_args():
 
     args.optimizer = "Adam"
     args.criterion = "CrossEntropy"
-    args.exp_mode = "LOCV"
+    # args.exp_mode = "LOCV"
     args.datanorm_type = "standardization"
     args.activation_fn = "relu"
 
@@ -73,5 +73,10 @@ def get_args():
     args.filtering = True
     args.freq1 = 0.001
     args.freq2 = 25.0
+
+    ## saved pickle file paths - data preprocessing
+    # 1) preprocessed data x and y for all subject
+    # 2) window indices 
+    args.pkl_save_path = os.path.join("datasets", args.data_name, f"window_size_{args.windowsize}")
 
     return args

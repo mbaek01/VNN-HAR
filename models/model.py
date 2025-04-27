@@ -26,10 +26,10 @@ class Model(object):
         if self.args.use_gpu:
             os.environ["CUDA_VISIBLE_DEVICES"] = str(self.args.gpu) if not self.args.use_multi_gpu else self.args.devices
             device = torch.device('cuda:{}'.format(self.args.gpu))
-            print('Using GPU: cuda:{}'.format(self.args.gpu))
+            print('Device: GPU, cuda:{}'.format(self.args.gpu))
         else:
             device = torch.device('cpu')
-            print('Using CPU')
+            print('Device: CPU')
         return device
     
     def build_model(self):
@@ -72,7 +72,7 @@ class model_builder(nn.Module):
                                 self.activation_fn_dict[args.activation_fn]
                                 )
 
-            print("Using the Baseline model")
+            print("Model: baseline")
         
         elif args.model_name =="baseline_attn":
             self.model = Baseline_Attn(args.c_in,
@@ -80,7 +80,7 @@ class model_builder(nn.Module):
                                         config["nb_units"],
                                         self.activation_fn_dict[args.activation_fn]
                                 )
-            print("Using the Baseline_Attention model")
+            print("Model: baseline_attn")
         
         elif args.model_name == "vn_baseline_attn":
             self.model = VN_Baseline_Attn((args.batch_size, 1, args.input_length, args.c_in), # TODO: remove 1 if not needed
@@ -92,14 +92,14 @@ class model_builder(nn.Module):
         elif args.model_name == "vnn_mlp":
             self.model = VNN_MLP(args.batch_size, args.input_length, args.c_in, args.num_classes)
 
-            print("Using the VNN_MLP model")
+            print("Model: vnn_mlp")
         
         elif args.model_name == "sa_har":
             self.model = SA_HAR((1, args.input_length, args.c_in),
                                 args.num_classes,
                                 config)
 
-            print("Using the Self-Attention HAR model")
+            print("Model: sa_har")
         
         elif args.model_name == "deepconvlstm":
             self.model = DeepConvLSTM((1, args.input_length, args.c_in),
@@ -111,7 +111,7 @@ class model_builder(nn.Module):
                                             args.num_classes,
                                             # self.args.filter_scaling_factor,
                                             config)
-            print("Using the deepconvlstm_attn model")
+            print("Model: deepconvlstm_attn")
 
         else:
             raise NotImplementedError

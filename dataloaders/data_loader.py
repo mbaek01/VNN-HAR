@@ -1,4 +1,5 @@
 import os
+import pickle
 import numpy as np
 import pandas as pd
 import random
@@ -23,12 +24,16 @@ def get_data(dataset, batch_size, flag="train"):
 class PAMAP2(object):
     def __init__(self, args):
         self.args          = args
+        self.data_name     = args.data_name
         self.data_path     = args.data_path
         self.windowsize    = args.windowsize
         self.freq1         = args.freq1
         self.freq2         = args.freq2
         self.sampling_freq = args.sampling_freq
-        self.exp_mode      = args.exp_mode
+        # self.exp_mode      = args.exp_mode
+        self.pkl_save_path = args.pkl_save_path
+        self.filtering     = args.filtering
+
         self.datanorm_type = args.datanorm_type
         self.train_vali_quote = args.train_vali_quote
         self.LOCV_keys = [[1],[2],[3],[4],[5],[6],[7],[8]] # 9 omitted
@@ -117,10 +122,6 @@ class PAMAP2(object):
         # dataset
         self.data_x, self.data_y = self.load_all_the_data(self.data_path)
 
-        # noise, gravitational force filtering
-        if self.args.filtering:
-            self.data_x = self.Sensor_data_noise_grav_filtering(self.data_x.set_index('sub_id').copy())
-
         # sliding window indexing
         self.train_slidingwindows = self.get_the_sliding_index(self.data_x.copy(), self.data_y.copy(), "train")
         self.test_slidingwindows  = self.get_the_sliding_index(self.data_x.copy(), self.data_y.copy(), "test")
@@ -128,48 +129,82 @@ class PAMAP2(object):
 
 
     def load_all_the_data(self, data_path):
-        file_list = os.listdir(data_path)
-        
-        df_dict = {}
-        for file in file_list:
-            if file == 'subject109.dat': continue
+        # if preprocessed dataset already exists in pickle file, load from the saved_data_path
+
+        saved_data_path = os.path.join(self.pkl_save_path, f"preprocessed_{self.data_name}.pickle")
+
+        if os.path.exists(saved_data_path):
             
-            sub_data = pd.read_table(os.path.join(data_path,file), header=None, sep='\s+')
-            sub_data = sub_data.iloc[:,self.used_cols]
-            sub_data.columns = self.col_names
+            print(f"Preprocessed file exists at {saved_data_path}. \n Loading from the file path...")
 
-            # if missing values, imputation
-            sub_data = sub_data.interpolate(method='linear', limit_direction='both')
-            sub = int(self.file_encoding[file])
-            sub_data['sub_id'] = sub
-            sub_data["sub"] = sub
+            with open(saved_data_path, 'rb') as f:
+                data = pickle.load(f)
+            
+            data_x = data['data_x']
+            data_y = data['data_y']
+        
+        else: # if not saved yet
 
-            if sub not in self.sub_ids_of_each_sub.keys():
-                self.sub_ids_of_each_sub[sub] = []
-            self.sub_ids_of_each_sub[sub].append(sub)
-            df_dict[self.file_encoding[file]] = sub_data   
+            print(f"Preprocessed pickle file not found at: {saved_data_path} \n Preprocessing {self.data_name}...")
+            
+            if not os.path.exists(self.pkl_save_path):
+                os.makedirs(self.pkl_save_path)
 
-        df_all = pd.concat(df_dict)
+            file_list = os.listdir(data_path)
+            
+            df_dict = {}
+            for file in file_list:
+                if file == 'subject109.dat': continue # due to lack of data in majority of activities
+                
+                sub_data = pd.read_table(os.path.join(data_path,file), header=None, sep='\s+')
+                sub_data = sub_data.iloc[:,self.used_cols]
+                sub_data.columns = self.col_names
 
-        # Downsampling - 99hz to 33hz
-        df_all.reset_index(drop=True,inplace=True)
-        index_list = list(np.arange(0,df_all.shape[0],3))
-        df_all = df_all.iloc[index_list]
+                # if missing values, imputation
+                sub_data = sub_data.interpolate(method='linear', limit_direction='both')
+                sub = int(self.file_encoding[file])
+                sub_data['sub_id'] = sub
+                sub_data["sub"] = sub
 
-        df_all = df_all.set_index('sub_id')
+                if sub not in self.sub_ids_of_each_sub.keys():
+                    self.sub_ids_of_each_sub[sub] = []
+                self.sub_ids_of_each_sub[sub].append(sub)
+                df_dict[self.file_encoding[file]] = sub_data   
 
-        df_all["activity_id"] = df_all["activity_id"].map(self.labelToId)
+            df_all = pd.concat(df_dict)
 
-        # reorder
-        if self.selected_cols:
-            df_all = df_all[self.selected_cols+["sub"]+["activity_id"]]
-        else:
-            df_all = df_all[self.col_names[1:]+["sub"]+["activity_id"]]
+            # Downsampling - 99hz to 33hz
+            df_all.reset_index(drop=True,inplace=True)
+            index_list = list(np.arange(0,df_all.shape[0],3))
+            df_all = df_all.iloc[index_list]
 
-        data_y = df_all.iloc[:,-1]
-        data_x = df_all.iloc[:,:-1]
+            df_all = df_all.set_index('sub_id')
 
-        data_x = data_x.reset_index()
+            df_all["activity_id"] = df_all["activity_id"].map(self.labelToId)
+
+            # reorder
+            if self.selected_cols:
+                df_all = df_all[self.selected_cols+["sub"]+["activity_id"]]
+            else:
+                df_all = df_all[self.col_names[1:]+["sub"]+["activity_id"]]
+
+            data_y = df_all.iloc[:,-1]
+            data_x = df_all.iloc[:,:-1]
+
+            data_x = data_x.reset_index()
+
+            # noise, gravitational force filtering
+            if self.filtering:
+                data_x = self.Sensor_data_noise_grav_filtering(data_x.set_index('sub_id').copy())
+
+            # save in a pickle file
+            data = {
+                    'data_x': data_x,
+                    'data_y': data_y
+                    }
+            
+            with open(saved_data_path, 'wb') as f:
+                pickle.dump(data, f)
 
         return data_x, data_y
     
@@ -208,47 +243,49 @@ class PAMAP2(object):
         else:
             self.normalized_data_x = self.data_x.copy()
 
-        # window index
+        # window indexing
         all_test_keys = self.test_keys.copy()
 
         # -----------------test_window_index---------------------
-        # test_file_name = os.path.join(self.window_save_path,
-        #                                 "{}_droptrans_{}_windowsize_{}_{}_test_ID_{}.pickle".format(self.data_name, 
-        #                                                                                             self.drop_transition,
-        #                                                                                             self.exp_mode,
-        #                                                                                             self.windowsize, 
-        #                                                                                             self.index_of_cv-1))
-        # if os.path.exists(test_file_name):
-        #     with open(test_file_name, 'rb') as handle:
-        #         self.test_window_index = pickle.load(handle)
-        # else:
-        self.test_window_index = []
-        for index, window in enumerate(self.test_slidingwindows):
-            sub_id = window[0]
-            if sub_id in all_test_keys:
-                self.test_window_index.append(index)
-            # with open(test_file_name, 'wb') as handle:
-            #     pickle.dump(self.test_window_index, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        test_file_name = os.path.join(self.pkl_save_path,
+                                        "{}_test_windowsize_{}_subject_{}_filtered_{}.pickle".format(self.data_name, 
+                                                                                                    self.windowsize, 
+                                                                                                    self.index_of_cv,
+                                                                                                    self.filtering))
+        if os.path.exists(test_file_name):      # load from previously saved indices, or
+            with open(test_file_name, 'rb') as handle:
+                self.test_window_index = pickle.load(handle)
+        else:
+            self.test_window_index = []         # generate new indices 
+            for index, window in enumerate(self.test_slidingwindows):
+                sub_id = window[0]
+                if sub_id in all_test_keys:
+                    self.test_window_index.append(index)
+            
+            # save sliding window indices 
+            with open(test_file_name, 'wb') as handle:
+                pickle.dump(self.test_window_index, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         # -----------------train_vali_window_index---------------------
 
-        # train_file_name = os.path.join(self.window_save_path,
-        #                                 "{}_droptrans_{}_windowsize_{}_{}_train_ID_{}.pickle".format(self.data_name, 
-        #                                                                                             self.drop_transition,
-        #                                                                                             self.exp_mode,
-        #                                                                                             self.windowsize, 
-        #                                                                                             self.index_of_cv-1))
-        # if os.path.exists(train_file_name):
-        #     with open(train_file_name, 'rb') as handle:
-        #         train_vali_window_index = pickle.load(handle)
-        # else:
-        train_vali_window_index = []
-        for index, window in enumerate(self.train_slidingwindows):
-            sub_id = window[0]
-            if sub_id not in all_test_keys:
-                train_vali_window_index.append(index)
-            # with open(train_file_name, 'wb') as handle:
-            #     pickle.dump(train_vali_window_index, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        train_file_name = os.path.join(self.pkl_save_path,
+                                        "{}_train_windowsize_{}_subject_{}_filtered_{}.pickle".format(self.data_name, 
+                                                                                                    self.windowsize, 
+                                                                                                    self.index_of_cv,
+                                                                                                    self.filtering))
+        if os.path.exists(train_file_name):
+            with open(train_file_name, 'rb') as handle:
+                train_vali_window_index = pickle.load(handle)
+        else:
+            train_vali_window_index = []
+            for index, window in enumerate(self.train_slidingwindows):
+                sub_id = window[0]
+                if sub_id not in all_test_keys:
+                    train_vali_window_index.append(index)
+            
+            # save sliding window indices 
+            with open(train_file_name, 'wb') as handle:
+                pickle.dump(train_vali_window_index, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         random.shuffle(train_vali_window_index)
         # train valid split
