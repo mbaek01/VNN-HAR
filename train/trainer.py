@@ -5,12 +5,14 @@ import numpy as np
 from sklearn.metrics import f1_score, accuracy_score
 
 from models.model import Model
+from train.rotation import rotation
 from utils import EarlyStopping, adjust_learning_rate_class
 
 class Trainer:
     def __init__(self, args, model, curr_save_path):
         self.model = model.model
         self.device = model.device
+        self.train_rot = args.train_rot
 
         self.criterion = model.select_criterion().to(self.device)
         self.optimizer = model.select_optimizer()
@@ -30,6 +32,11 @@ class Trainer:
         epoch_time = time.time()
         
         for batch_x1, batch_y in train_loader:
+            
+            # Applying rotation to the data
+            if self.train_rot in ["so3", "z"]:
+                batch_x1 = rotation(batch_x1, self.train_rot, self.device)
+
             batch_x1 = batch_x1.double().to(self.device)
             batch_y = batch_y.long().to(self.device)
 
@@ -40,6 +47,8 @@ class Trainer:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+
+            break # for debug - needs to be deleted!!
 
         epoch_time = time.time() - epoch_time
         train_loss = np.average(train_loss)
@@ -54,6 +63,11 @@ class Trainer:
 
         with torch.no_grad():
             for batch_x1, batch_y in valid_loader:
+
+                # Applying rotation to the data
+                if self.train_rot in ["so3", "z"]:
+                    batch_x1 = rotation(batch_x1, self.train_rot, self.device)
+
                 batch_x1 = batch_x1.double().to(self.device)
                 batch_y = batch_y.long().to(self.device)
 
@@ -66,7 +80,8 @@ class Trainer:
                 
                 predictions.extend(pred)
                 true_labels.extend(true)
-
+                
+                # break # for debug - needs to be deleted!!
 
         predictions = np.array(predictions)
         true_labels = np.array(true_labels)
@@ -115,7 +130,7 @@ class Trainer:
             if self.early_stopping.early_stop:
                 print("Early stopping")
                 break
-
+            break # for debug - needs to be deleted!!
             self.epoch_log.write("----------------------------------------------------------------------------------------\n")
             self.epoch_log.flush()
             
@@ -142,6 +157,11 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
 
     # Testing phase
     for i, (batch_x1, batch_y) in enumerate(test_loader):
+
+        # Applying rotation to the data
+        if args.test_rot in ["so3", "z"]:
+            batch_x1 = rotation(batch_x1, args.test_rot, device)
+
         batch_x1 = batch_x1.double().to(device)
         batch_y = batch_y.long().to(device)
 
@@ -149,6 +169,8 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
     
         preds.extend(list(np.argmax(outputs.detach().cpu().numpy(),axis=1)))
         trues.extend(list(batch_y.detach().cpu().numpy()))
+
+        break # for debug - needs to be deleted!!
     
     acc = accuracy_score(preds,trues)
     f_w = f1_score(trues, preds, average='weighted')

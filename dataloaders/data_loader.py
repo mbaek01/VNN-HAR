@@ -415,7 +415,7 @@ class Dataset(object):
         if self.flag == "train":
             self.slidingwindows = dataset.train_slidingwindows
             self.window_index = dataset.train_window_index
-        elif self.flag == "vali":
+        elif self.flag == "valid":
             self.slidingwindows = dataset.train_slidingwindows
             self.window_index = dataset.vali_window_index
         else:

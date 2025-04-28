@@ -17,16 +17,22 @@ def get_args():
     parser = argparse.ArgumentParser(description='Rotation-Invariant HAR Classification using Vector Neuron Network')
     parser.add_argument('-d', '--data_name', default='pamap2', type=str, help='Name of the Dataset')
 
-    # Available Models: baseline_attn, 
-    #                   vn_baseline_attn 
-    #                   deepconvlstm_attn,
-    #                   deepconvlstm,
-    #                   sa_har
     parser.add_argument('-m', '--model_name', default='baseline_attn', type=str, help="Name of the Model") 
-    
+    '''
+    Available Models: baseline_attn, 
+                      vn_baseline_attn 
+                      deepconvlstm_attn,
+                      deepconvlstm,
+                      sa_har
+    '''
+
     parser.add_argument('-n', '--train', default=True,  type=str2bool, help="perform training")
     parser.add_argument('-t', '--test', default=True, type=str2bool, help='perform testing')
     parser.add_argument('-g', '--gpu', default=0, type=int, help="gpu index number")
+    parser.add_argument('--train_rot', type=str, default='aligned', help='Rotation augmentation to input data in training [default: aligned]',
+                        choices=['aligned', 'z', 'so3'])
+    parser.add_argument('--test_rot', type=str, default='aligned', help='Rotation augmentation to input data in testing [default: aligned]',
+                    choices=['aligned', 'z', 'so3'])
 
     args = parser.parse_args()
 

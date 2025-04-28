@@ -309,7 +309,7 @@ def get_setting_name(args):
 def vn_c_reshape(x, time_length):
     # For PAMAP only!!
 
-    # Example input: (batch, time_length, 9)
+    # Example input: (batch, 1, time_length, 9)
     # Original order: [x_hand, y_hand, z_hand, x_chest, y_chest, z_chest, x_ankle, y_ankle, z_ankle]
     channel_indices = [
         0, 3, 6,  # x for hand, chest, ankle
@@ -319,9 +319,9 @@ def vn_c_reshape(x, time_length):
     batch = x.size(0)
 
     # x is your input tensor of shape (batch, 1, time_length, 9)
-    x_reordered = x[:, :, :, channel_indices]  # (batch, 1, time_length, 9)
+    x_reordered = x[:, :, :, channel_indices]  # [batch, 1, time_length, 9]
 
     # Now reshape
-    x_reshaped = x_reordered.reshape(batch, time_length, 3, 3)
+    x_reshaped = x_reordered.reshape(batch, time_length, 3, -1) # [batch, time_length, 3(xyz), Channels // 3]
 
     return x_reshaped
