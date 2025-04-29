@@ -61,7 +61,7 @@ def get_args():
     args.learning_rate = 0.0001
     args.learning_rate_patience = 7
     args.learning_rate_factor = 0.1
-    args.early_stop_patience = 15
+    args.early_stop_patience = 20
     args.batch_size = 256
     args.shuffle = True
     args.drop_last = False

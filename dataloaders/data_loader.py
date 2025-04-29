@@ -3,7 +3,9 @@ import pickle
 import numpy as np
 import pandas as pd
 import random
+from collections import Counter
 from torch.utils.data import DataLoader
+from sklearn.model_selection import train_test_split
 
 from utils import Normalizer,components_selection_one_signal
 
@@ -123,8 +125,8 @@ class PAMAP2(object):
         self.data_x, self.data_y = self.load_all_the_data(self.data_path)
 
         # sliding window indexing
-        self.train_slidingwindows = self.get_the_sliding_index(self.data_x.copy(), self.data_y.copy(), "train")
-        self.test_slidingwindows  = self.get_the_sliding_index(self.data_x.copy(), self.data_y.copy(), "test")
+        self.train_slidingwindows, self.activity_per_windows = self.get_the_sliding_index(self.data_x.copy(), self.data_y.copy(), "train")
+        self.test_slidingwindows, _  = self.get_the_sliding_index(self.data_x.copy(), self.data_y.copy(), "test")
 
 
 
@@ -287,10 +289,16 @@ class PAMAP2(object):
             with open(train_file_name, 'wb') as handle:
                 pickle.dump(train_vali_window_index, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        random.shuffle(train_vali_window_index)
-        # train valid split
-        self.train_window_index = train_vali_window_index[:int(self.train_vali_quote*len(train_vali_window_index))]
-        self.vali_window_index = train_vali_window_index[int(self.train_vali_quote*len(train_vali_window_index)):]
+        # random.shuffle(train_vali_window_index)
+
+        # self.train_window_index = train_vali_window_index[:int(self.train_vali_quote*len(train_vali_window_index))]
+        # self.vali_window_index = train_vali_window_index[int(self.train_vali_quote*len(train_vali_window_index)):]
+
+        # train valid stratified split
+        self.train_window_index, self.vali_window_index, _, _ = self.stratified_train_valid_split(windows=train_vali_window_index, 
+                                                                                                activities=[self.activity_per_windows[i] for i in train_vali_window_index],
+                                                                                                valid_ratio=1.0-self.train_vali_quote)
+
 
     def normalization(self, train_vali, test): # test=None
         train_vali_sensors = train_vali.iloc[:,1:-1]
@@ -367,6 +375,7 @@ class PAMAP2(object):
             displacement = int(0.1 * self.windowsize)
 
         window_index = []
+        activity_per_window = []
         for index in data_x.act_block.unique():
 
             temp_df = data_x[data_x["act_block"]==index]
@@ -376,14 +385,41 @@ class PAMAP2(object):
             end   = start + self.windowsize
 
             while end <= temp_df.index[-1]+1:
-
-                if temp_df.loc[start:end-1,"activity_id"].mode().loc[0] not in self.drop_activities:
-                    window_index.append([sub_id, start, end])
+                curr_activity = temp_df.loc[start:end-1,"activity_id"].mode().loc[0]
+                if curr_activity not in self.drop_activities:
+                    window_index.append([sub_id, start, end, curr_activity])
+                    activity_per_window.append(curr_activity)
 
                 start = start + displacement
                 end   = start + self.windowsize
 
-        return window_index
+        return window_index, activity_per_window
+    
+    def stratified_train_valid_split(self, windows, activities, valid_ratio=0.1):
+        """
+        Parameters:
+        - windows: Array of windows (ex.[sub, start, end])
+        - activities: Array of corresponding class labels
+        - valid_ratio: Desired validation set proportion (e.g., 0.1 for 10%)
+        - random_state: Seed for reproducibility
+        """
+
+        # Check if the counts of all activities are at least 2. 
+        counts = Counter(activities)
+
+        for cls, count in counts.items():
+            if count < 2:
+                print(f"Class {self.label_map[cls]} has only {count} occurrence(s)")
+
+        # Stratified split
+        X_train, X_valid, y_train, y_valid = train_test_split(
+            windows, activities, 
+            test_size=valid_ratio, 
+            stratify=activities, 
+            random_state=self.args.seed
+        )
+        
+        return X_train, X_valid, y_train, y_valid
     
     def Sensor_filter_acoording_to_pos_and_type(self, select, filter, all_col_names, filtertype):
         """

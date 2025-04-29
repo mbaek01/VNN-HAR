@@ -140,11 +140,11 @@ class Rotate:
           on the dimensions of the transform
       """
       points_batch = points.clone()
-      if points_batch.dim() == 2:
-          points_batch = points_batch[None]  # (P, 3) -> (1, P, 3)
-      if points_batch.dim() != 3:
-          msg = "Expected points to have dim = 2 or dim = 3: got shape %r"
-          raise ValueError(msg % repr(points.shape))
+    #   if points_batch.dim() == 2:
+    #       points_batch = points_batch[None]  # (P, 3) -> (1, P, 3)
+    #   if points_batch.dim() != 3:
+    #       msg = "Expected points to have dim = 2 or dim = 3: got shape %r"
+    #       raise ValueError(msg % repr(points.shape))
 
       points_out = self._broadcast_bmm(points_batch, self.rotation) # (N, P, 3) @ (N, 3, 3)
 

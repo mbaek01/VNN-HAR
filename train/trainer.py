@@ -48,7 +48,7 @@ class Trainer:
             loss.backward()
             self.optimizer.step()
 
-            break # for debug - needs to be deleted!!
+            # break # for debug - needs to be deleted!!
 
         epoch_time = time.time() - epoch_time
         train_loss = np.average(train_loss)
@@ -130,7 +130,7 @@ class Trainer:
             if self.early_stopping.early_stop:
                 print("Early stopping")
                 break
-            break # for debug - needs to be deleted!!
+            # break # for debug - needs to be deleted!!
             self.epoch_log.write("----------------------------------------------------------------------------------------\n")
             self.epoch_log.flush()
             
@@ -170,7 +170,7 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
         preds.extend(list(np.argmax(outputs.detach().cpu().numpy(),axis=1)))
         trues.extend(list(batch_y.detach().cpu().numpy()))
 
-        break # for debug - needs to be deleted!!
+        # break # for debug - needs to be deleted!!
     
     acc = accuracy_score(preds,trues)
     f_w = f1_score(trues, preds, average='weighted')
