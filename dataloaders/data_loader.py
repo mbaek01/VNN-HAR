@@ -387,7 +387,7 @@ class PAMAP2(object):
             while end <= temp_df.index[-1]+1:
                 curr_activity = temp_df.loc[start:end-1,"activity_id"].mode().loc[0]
                 if curr_activity not in self.drop_activities:
-                    window_index.append([sub_id, start, end, curr_activity])
+                    window_index.append([sub_id, start, end])
                     activity_per_window.append(curr_activity)
 
                 start = start + displacement

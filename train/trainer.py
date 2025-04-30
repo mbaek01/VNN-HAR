@@ -32,13 +32,12 @@ class Trainer:
         epoch_time = time.time()
         
         for batch_x1, batch_y in train_loader:
-            
+            batch_x1 = batch_x1.double().to(self.device)
+            batch_y = batch_y.long().to(self.device)
+
             # Applying rotation to the data
             if self.train_rot in ["so3", "z"]:
                 batch_x1 = rotation(batch_x1, self.train_rot, self.device)
-
-            batch_x1 = batch_x1.double().to(self.device)
-            batch_y = batch_y.long().to(self.device)
 
             outputs = self.model(batch_x1)
             loss = self.criterion(outputs, batch_y)
@@ -64,12 +63,13 @@ class Trainer:
         with torch.no_grad():
             for batch_x1, batch_y in valid_loader:
 
+                batch_x1 = batch_x1.double().to(self.device)
+                batch_y = batch_y.long().to(self.device)
+
                 # Applying rotation to the data
                 if self.train_rot in ["so3", "z"]:
                     batch_x1 = rotation(batch_x1, self.train_rot, self.device)
 
-                batch_x1 = batch_x1.double().to(self.device)
-                batch_y = batch_y.long().to(self.device)
 
                 outputs = self.model(batch_x1)
                 loss = self.criterion(outputs, batch_y)
@@ -157,13 +157,12 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
 
     # Testing phase
     for i, (batch_x1, batch_y) in enumerate(test_loader):
+        batch_x1 = batch_x1.double().to(device)
+        batch_y = batch_y.long().to(device)
 
         # Applying rotation to the data
         if args.test_rot in ["so3", "z"]:
             batch_x1 = rotation(batch_x1, args.test_rot, device)
-
-        batch_x1 = batch_x1.double().to(device)
-        batch_y = batch_y.long().to(device)
 
         outputs = model(batch_x1)
     
