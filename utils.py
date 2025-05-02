@@ -232,43 +232,23 @@ def get_setting_name(args):
     config_file = open('configs/model.yaml', mode='r')
     config = yaml.load(config_file, Loader=yaml.FullLoader)[args.model_name]
 
-    if args.model_name== "baseline":
-        setting = "baseline_data_{}_seed_{}_windowsize_{}_{}".format(
+    if args.model_name == "sa_har":
+        setting = "sa_har_data_{}_seed_{}_window_size_{}_num_units_{}_{}".format(
             args.data_name,
             args.seed,
             args.windowsize,
-            args.timestamp
-            )
-        return setting
-    
-    elif args.model_name== "baseline_attn":
-        setting = "baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
-            args.data_name,
             config["nb_units"],
-            config["activation_fn"],
-            args.seed,
-            args.windowsize,
             args.timestamp
             )
         return setting
 
-    elif args.model_name== "vn_baseline_attn":
-        setting = "vn_baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
+    elif args.model_name == "vn_sa_har":
+        setting = "vn_sa_har_data_{}_seed_{}_window_size_{}_num_units_{}_{}".format(
             args.data_name,
-            config["nb_units"],
-            config["activation_fn"],
             args.seed,
             args.windowsize,
+            config["nb_units"],
             args.timestamp
-            )
-        return setting
-
-    
-    elif args.model_name== "vnn_mlp":
-        setting = "vnn_mlp_data_{}_seed_{}_windowsize_{}_{}".format(
-            args.data_name,
-            args.seed,
-            args.windowsize
             )
         return setting
 
@@ -294,15 +274,47 @@ def get_setting_name(args):
             )
         return setting
     
-    elif args.model_name == "sa_har":
-        setting = "sa_har_data_{}_seed_{}_window_size_{}_num_units_{}_{}".format(
-            args.data_name,
-            args.seed,
-            args.windowsize,
-            config["nb_units"],
-            args.timestamp
-            )
-        return setting
+    # elif args.model_name== "baseline":
+    #     setting = "baseline_data_{}_seed_{}_windowsize_{}_{}".format(
+    #         args.data_name,
+    #         args.seed,
+    #         args.windowsize,
+    #         args.timestamp
+    #         )
+    #     return setting
+    
+    # elif args.model_name== "baseline_attn":
+    #     setting = "baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
+    #         args.data_name,
+    #         config["nb_units"],
+    #         config["activation_fn"],
+    #         args.seed,
+    #         args.windowsize,
+    #         args.timestamp
+    #         )
+    #     return setting
+
+    # elif args.model_name== "vn_baseline_attn":
+    #     setting = "vn_baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
+    #         args.data_name,
+    #         config["nb_units"],
+    #         config["activation_fn"],
+    #         args.seed,
+    #         args.windowsize,
+    #         args.timestamp
+    #         )
+    #     return setting
+
+    
+    # elif args.model_name== "vnn_mlp":
+    #     setting = "vnn_mlp_data_{}_seed_{}_windowsize_{}_{}".format(
+    #         args.data_name,
+    #         args.seed,
+    #         args.windowsize
+    #         )
+    #     return setting
+    
+
     else:
         raise NotImplementedError
     
@@ -322,6 +334,6 @@ def vn_c_reshape(x, time_length):
     x_reordered = x[:, :, :, channel_indices]  # [batch, 1, time_length, 9]
 
     # Now reshape
-    x_reshaped = x_reordered.reshape(batch, time_length, 3, -1) # [batch, time_length, 3(xyz), Channels // 3]
+    x_reshaped = x_reordered.reshape(batch, 1, time_length, 3, -1) # [batch, 1, time_length, 3(xyz), Channels // 3]
 
     return x_reshaped

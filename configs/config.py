@@ -19,11 +19,10 @@ def get_args():
 
     parser.add_argument('-m', '--model_name', default='baseline_attn', type=str, help="Name of the Model") 
     '''
-    Available Models: baseline_attn, 
-                      vn_baseline_attn 
-                      deepconvlstm_attn,
+    Available Models: deepconvlstm_attn,
                       deepconvlstm,
-                      sa_har
+                      sa_har,
+                      vn_sa_har
     '''
 
     parser.add_argument('-n', '--train', default=True,  type=str2bool, help="perform training")
@@ -66,6 +65,7 @@ def get_args():
     args.shuffle = True
     args.drop_last = False
     args.train_vali_quote = 0.90
+    args.f_in = 1 # input filter channel size
 
     window_seconds = config["window_seconds"]
     args.windowsize = int(window_seconds * config["sampling_freq"])

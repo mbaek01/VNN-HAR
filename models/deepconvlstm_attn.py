@@ -65,7 +65,7 @@ class DeepConvLSTM_ATTN(nn.Module):
         self.nb_units_lstm  = int(config["nb_units_lstm"]) #*filter_scaling_factor)
         
         
-        self.nb_channels = input_shape[2]
+        self.nb_channels = input_shape[3]
         self.nb_classes = nb_classes
 
     
@@ -73,7 +73,7 @@ class DeepConvLSTM_ATTN(nn.Module):
 
         for i in range(self.nb_conv_blocks):
             if i == 0:
-                input_filters = input_shape[0]
+                input_filters = input_shape[1]
             else:
                 input_filters = self.nb_filters
     

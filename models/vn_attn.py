@@ -3,7 +3,40 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .vn_layers import VNLeakyReLU, VNLinear, VNLayerNorm
+from .vn_layers import VNLeakyReLU, VNLinearLeakyReLU, VNLinear, VNLayerNorm
+
+class VNSensorAttention(nn.Module):
+    def __init__(self, input_shape, nb_units):
+        super(VNSensorAttention, self).__init__()
+        self.ln = VNLayerNorm(input_shape[3] // 3)        # input_shape[3] = c_in
+        
+        # TODO: test share_nonlinearlity
+        # self.conv_1 = nn.Conv2d(in_channels=1, out_channels=nb_units, kernel_size=3, dilation=2, padding='same')
+        self.conv_1 = VNLinearLeakyReLU(1, nb_units, dim=5, share_nonlinearity=False, negative_slope=0.2) # kernel_size, dilation ?
+        # self.conv_f = nn.Conv2d(in_channels=nb_units, out_channels=1, kernel_size=1, padding='same') #  1x1 conv
+        self.conv_f = VNLinearLeakyReLU(nb_units, 1, dim=5, share_nonlinearity=False, negative_slope=0.0)
+        self.softmax = nn.Softmax(dim=3)
+
+        
+    def forward(self, inputs):
+        '''
+        input: [batch  * length * channel]
+        output: [batch, 1, length, d]
+        '''
+        inputs = self.ln(inputs)        # B, L, 3, C      
+             
+        x = inputs.unsqueeze(1)         # B, 1, L, 3, C           
+        
+        x = self.conv_1(x)              # B, nb_units, L, 3, C;  nb_units = 128 // 3
+                                    
+        x = self.conv_f(x)              # B, 1, L, 3, C     
+        
+        x = self.softmax(x) # dim=3; C
+        x = x.squeeze(1)                # B, L, 3, C        
+
+        return torch.mul(inputs, x), x  # (B, L, 3, C), (B, L , 3, C)
+        # batch * channel * len, batch * channel * len 
+
 
 class VNAttentionLayer(nn.Module):
     def __init__(self, d_model, n_heads):

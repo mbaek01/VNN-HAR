@@ -18,6 +18,9 @@ vnn_mlp:
 sa_har:
   nb_units: 128
 
+vn_sa_har:
+  nb_units: 120
+
 deepconvlstm:
   nb_conv_blocks: 2
   nb_filters: 64

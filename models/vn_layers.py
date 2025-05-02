@@ -62,14 +62,14 @@ class VNLinearLeakyReLU(nn.Module):
         x: point features of shape [B, N_feat, 3, N_samples, ...] if using transpose(1, -1)
         '''
         # Linear
-        # p = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
-        p = self.map_to_feat(x)
+        p = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
+        # p = self.map_to_feat(x)
         # BatchNorm
         if self.batch_norm:
-            p = self.batchnorm(p) # q
+            p = self.batchnorm(p) 
         # LeakyReLU
-        # d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1) # k
-        d = self.map_to_dir(x)
+        d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1) # k
+        # d = self.map_to_dir(x)
         dotprod = (p*d).sum(2, keepdims=True)
         mask = (dotprod >= 0).float()
         d_norm_sq = (d*d).sum(2, keepdims=True)
@@ -90,10 +90,11 @@ class VNBatchNorm(nn.Module):
         x: point features of shape [B, N_feat, 3, N_samples, ...] if using transpose(1, -1)
         '''
         # norm = torch.sqrt((x*x).sum(2))
-        norm = torch.norm(x, dim=2) + EPS
+        
+        norm = torch.norm(x, dim=4) + EPS
         norm_bn = self.bn(norm)
-        norm = norm.unsqueeze(2)
-        norm_bn = norm_bn.unsqueeze(2)
+        norm = norm.unsqueeze(4)
+        norm_bn = norm_bn.unsqueeze(4)
         x = x / norm * norm_bn
         
         return x
@@ -138,16 +139,21 @@ class VNStdFeature(nn.Module):
         '''
         x: point features of shape [B, N_feat, 3, N_samples, ...] if using transpose(1, -1)
 
-        For vn_baseline_attn, 
+        For vn_sa_har, 
 
-        x shape: (B, 2*C, 3); C = nb_units // 3
-        in_channel = nb_units*2
+        x shape: (B, 3, 2*C),  where C = nb_units // 3
+
+        in_channel = nb_units // 3 * 2
+
         dim = 3
+
+        transpose(1,-1) on z undos the internal transpose inside the VNLinearLeakyReLU function.
+        vn1, vn2, vn_lin all performs linear layer on feature vector C
         '''
-        z0 = x               # Shape: (B, 3, 2*C)  ; C = nb_units // 3
-        z0 = self.vn1(z0)    # Shape: (B, 3, C)    ; C = nb_units // 3
-        z0 = self.vn2(z0)    # Shape: (B, 3, C//2) ; C = nb_units // 3
-        z0 = self.vn_lin(z0) # Shape: (B, 3, 3)    
+        z0 = x                                               # Shape: (B, 3, 2*C)  ; C = nb_units // 3
+        z0 = self.vn1(z0.transpose(1,-1)).transpose(1,-1)    # Shape: (B, 3, C)    ; C = nb_units // 3
+        z0 = self.vn2(z0.transpose(1,-1)).transpose(1,-1)    # Shape: (B, 3, C//2) ; C = nb_units // 3
+        z0 = self.vn_lin(z0)                                 # Shape: (B, 3, 3)    
         
         if self.normalize_frame:
             # make z0 orthogonal. u2 = v2 - proj_u1(v2)
@@ -165,8 +171,8 @@ class VNStdFeature(nn.Module):
             u3 = torch.cross(u1, u2)
             z0 = torch.stack([u1, u2, u3], dim=1).transpose(1, 2)
         else:
-            z0 = z0.transpose(1, 2) 
-            # shape :(B, 3, 3(hidden)) to (B, 3(hidden), 3)
+            z0 = z0.transpose(1, 2)     # shape :(B, 3, 3(hidden)) to (B, 3(hidden), 3)
+            
         
         if self.dim == 4:
             x_std = torch.einsum('bijm,bjkm->bikm', x, z0) # not adjusted 

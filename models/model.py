@@ -10,6 +10,7 @@ from .sa_har import SA_HAR
 from .deepconvlstm import DeepConvLSTM
 from .deepconvlstm_attn import DeepConvLSTM_ATTN
 from .vn_baseline_attn import VN_Baseline_Attn
+from .vn_sa_har import VN_SA_HAR
 
 class Model(object):
     def __init__(self, args):
@@ -55,7 +56,7 @@ class Model(object):
     
 
 class model_builder(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, input_f_channel=None):
         super(model_builder, self).__init__()
         self.activation_fn_dict = {"relu":nn.ReLU, 
                                    "leakyrelu":nn.LeakyReLU, 
@@ -64,55 +65,72 @@ class model_builder(nn.Module):
         config_file = open('./configs/model.yaml', mode='r')
         config = yaml.load(config_file, Loader=yaml.FullLoader)[args.model_name]
 
-        # input shape for all models: (B, 1, L, C)
+        if input_f_channel is None:
+            f_in = args.f_in
+        else:
+            f_in = input_f_channel
 
-        if args.model_name == "baseline":
-            self.model = Baseline(int(args.input_length * args.c_in),
+        # input shape for all models: (B, f_in, L, C) ; f_in = 1
+        input_shape = (args.batch_size, f_in, args.input_length, args.c_in)
+        print(f"Input Size: {input_shape}")
+
+        if args.model_name == "sa_har":
+            self.model = SA_HAR(input_shape,
                                 args.num_classes,
-                                self.activation_fn_dict[args.activation_fn]
+                                config
                                 )
-
-            print("Model: baseline")
+            print(f"Model: sa_har")
         
-        elif args.model_name =="baseline_attn":
-            self.model = Baseline_Attn(args.c_in,
-                                        args.num_classes,
-                                        config["nb_units"],
-                                        self.activation_fn_dict[args.activation_fn]
-                                )
-            print("Model: baseline_attn")
-        
-        elif args.model_name == "vn_baseline_attn":
-            self.model = VN_Baseline_Attn((args.batch_size, 1, args.input_length, args.c_in), # TODO: remove 1 if not needed
+        elif args.model_name == "vn_sa_har":
+            self.model = VN_SA_HAR(input_shape,
                                    args.num_classes,
-                                   config["nb_units"],
-                                   config["activation_fn"]
+                                   int(config["nb_units"])
                                    )
+            print(f"Model: vn_sa_har")
 
-        elif args.model_name == "vnn_mlp":
-            self.model = VNN_MLP(args.batch_size, args.input_length, args.c_in, args.num_classes)
-
-            print("Model: vnn_mlp")
-        
-        elif args.model_name == "sa_har":
-            self.model = SA_HAR((1, args.input_length, args.c_in),
-                                args.num_classes,
-                                config)
-
-            print("Model: sa_har")
-        
         elif args.model_name == "deepconvlstm":
-            self.model = DeepConvLSTM((1, args.input_length, args.c_in),
+            self.model = DeepConvLSTM(input_shape,
                                       args.num_classes,
-                                      config)
+                                      config
+                                      )
+            print(f"Model: deepconvlstm")
         
         elif args.model_name == "deepconvlstm_attn":
-            self.model = DeepConvLSTM_ATTN((1, args.input_length, args.c_in), 
-                                            args.num_classes,
-                                            # self.args.filter_scaling_factor,
-                                            config)
-            print("Model: deepconvlstm_attn")
+            self.model = DeepConvLSTM_ATTN(input_shape, 
+                                           args.num_classes,
+                                           config
+                                           )
+            print(f"Model: deepconvlstm_attn")
 
+        # elif args.model_name == "baseline":
+        #     self.model = Baseline(int(args.input_length * args.c_in),
+        #                         args.num_classes,
+        #                         self.activation_fn_dict[args.activation_fn]
+        #                         )
+
+        #     print("Model: baseline")
+        
+        # elif args.model_name =="baseline_attn":
+        #     self.model = Baseline_Attn(args.c_in,
+        #                                 args.num_classes,
+        #                                 config["nb_units"],
+        #                                 self.activation_fn_dict[args.activation_fn]
+        #                         )
+        #     print("Model: baseline_attn")
+        
+        # elif args.model_name == "vn_baseline_attn":
+        #     self.model = VN_Baseline_Attn(input,
+        #                                   args.num_classes,
+        #                                   config["nb_units"],
+        #                                   config["activation_fn"]
+        #                                   )
+        #     print("Model: baseline_attn")
+
+        # elif args.model_name == "vnn_mlp":
+        #     self.model = VNN_MLP(args.batch_size, args.input_length, args.c_in, args.num_classes)
+
+        #     print("Model: vnn_mlp")
+        
         else:
             raise NotImplementedError
 
