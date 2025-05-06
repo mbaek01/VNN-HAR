@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from .vn_attn import VNSensorAttention, VNEncoderLayer, VNAttentionWithContext
-from .vn_layers import VNLinear, VNLeakyReLU, VNLinearLeakyReLU, VNStdFeature
+from .vn_layers import VNLinearLeakyReLU, VNStdFeature
 from utils import vn_c_reshape
 
 class VNConvBlock(nn.Module):
@@ -19,9 +19,6 @@ class VNConvBlock(nn.Module):
         # TODO: test with share_nonlinearity 
         self.conv1 = VNLinearLeakyReLU(self.input_filters, self.nb_units, batch_norm=self.batch_norm, dim=5)
         self.conv2 = VNLinearLeakyReLU(self.nb_units, 1, batch_norm=self.batch_norm, dim=5)
-        # if self.batch_norm:
-        #     self.norm1 = nn.BatchNorm2d(self.nb_units)
-        #     self.norm2 = nn.BatchNorm2d(1)
 
     def forward(self, x):
         # x: (B, 1, L, 3, C)
@@ -40,14 +37,12 @@ class VN_SA_HAR(nn.Module):
         self.nb_units = nb_units // 3
 
         self.first_conv = VNConvBlock(filter_width=5, 
-                            input_filters=input_shape[1], # f_in
-                            nb_units=self.nb_units, 
-                            batch_norm=True).double()
+                                      input_filters=input_shape[1], # f_in
+                                      nb_units=self.nb_units, 
+                                      batch_norm=True).double()
         
         self.VNSensorAttention = VNSensorAttention(input_shape, self.nb_units)
         self.conv1d = VNLinearLeakyReLU(input_shape[3]//3, self.nb_units, negative_slope=0.0)
-
-        self.vn_act = VNLeakyReLU(self.nb_units, share_nonlinearity=False, negative_slope=0.0)
 
         self.VNEncoderLayer1 = VNEncoderLayer(d_model = self.nb_units, n_heads=4 , d_ff = self.nb_units*4)
         self.VNEncoderLayer2 = VNEncoderLayer(d_model = self.nb_units, n_heads=4 , d_ff = self.nb_units*4)
@@ -64,40 +59,36 @@ class VN_SA_HAR(nn.Module):
 
     def forward(self, x):
         '''
-        x: [B, 1, L, 3(xyz), C] ; C = C//3
+        x: [B, 1, L, 3(xyz), C]     where   C = self.nb_units
         '''
         x = vn_c_reshape(x, self.time_length)                 # (B, 1, L, 3, C);
       
-        x = self.first_conv(x) # conv on f_in                 # (B, 1, L, 3, C)
+       # conv on f_in  
+        x = self.first_conv(x)                                # (B, 1, L, 3, C)
         x = x.squeeze(1)                                      # (B, L, 3, C)
 
         si, _ = self.VNSensorAttention(x)                     # (B, L, 3, C)
 
-        x = self.conv1d(si.transpose(1, -1)).transpose(1, -1) # conv on C
+        # conv on C
+        x = self.conv1d(si.transpose(1, -1)).transpose(1, -1) 
         
-        x = self.VNEncoderLayer1(x)
-        # Shape: (B, L, 3, C); C = nb_units // 3
-        x = self.VNEncoderLayer2(x)
-        # Shape: (B, L, 3, C); C = nb_units // 3
-        x = self.VNAttentionWithContext(x)
-        # Shape: (B, L, 3, C); C = nb_units // 3
-
-        # N = x.size(-1)
+        x = self.VNEncoderLayer1(x)                           # (B, L, 3, C)
+        x = self.VNEncoderLayer2(x)                           # (B, L, 3, C)
+        
+        x = self.VNAttentionWithContext(x)                    # (B, L, 3, C)
+       
         batch_temp = x.size(0)
         x_mean = x.mean(dim=-1, keepdim=True).expand(x.size())
-        x = torch.cat((x, x_mean), 2)
-        # Shape: (B, 3, 2*C); C = nb_units // 3
-
-        x, trans = self.std_feature(x)
-        # Shape: (B, 2*C, 3)
-
-        x = x.view(batch_temp, -1) # x = x.view(self.batch_size, -1, N)
-        # Shape: (B, 2*C*3)
-
-        x = self.dropout(self.relu(self.fc2(x)))
-        # Shape: (B, 4*nb_classes)
-
-        out = self.fc_out(x)
-        # Shape: (B, nb_classes)
-
+        x = torch.cat((x, x_mean), 2)                         # (B, 3, 2*C)
+       
+        # VN Invariant Layer
+        x, trans = self.std_feature(x)                        # (B, 2*C, 3) 
+       
+        # x = x.view(self.batch_size, -1, N)
+        x = x.view(batch_temp, -1)                            # (B, 2*C*3)
+        
+        x = self.dropout(self.relu(self.fc2(x)))              # (B, 4*nb_classes)
+        
+        out = self.fc_out(x)                                  # (B, nb_classes) 
+       
         return out

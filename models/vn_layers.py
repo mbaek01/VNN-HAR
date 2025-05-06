@@ -49,7 +49,7 @@ class VNLinearLeakyReLU(nn.Module):
         
         self.map_to_feat = nn.Linear(in_channels, out_channels, bias=False)
 
-        if self.batch_norm: # error-prone
+        if self.batch_norm: 
             self.batchnorm = VNBatchNorm(out_channels, dim=dim)
         
         if share_nonlinearity == True:
@@ -91,10 +91,10 @@ class VNBatchNorm(nn.Module):
         '''
         # norm = torch.sqrt((x*x).sum(2))
         
-        norm = torch.norm(x, dim=4) + EPS
+        norm = torch.norm(x, dim=-1) + EPS # normalize on the dimension of C 
         norm_bn = self.bn(norm)
-        norm = norm.unsqueeze(4)
-        norm_bn = norm_bn.unsqueeze(4)
+        norm = norm.unsqueeze(-1)
+        norm_bn = norm_bn.unsqueeze(-1)
         x = x / norm * norm_bn
         
         return x
