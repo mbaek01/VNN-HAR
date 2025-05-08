@@ -57,11 +57,11 @@ def get_args():
 
     # training settings
     args.train_epochs = 150
-    args.learning_rate = 0.0001
+    args.learning_rate = 0.001 # 0.0001
     args.learning_rate_patience = 7
     args.learning_rate_factor = 0.1
     args.early_stop_patience = 20
-    args.batch_size = 512 # 256
+    args.batch_size = 256
     args.shuffle = True
     args.drop_last = False
     args.train_vali_quote = 0.90

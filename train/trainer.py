@@ -130,7 +130,7 @@ class Trainer:
             self.epoch_log.flush()
             
             # Learning rate adapter
-            self.learning_rate_adapter(self.optimizer, valid_loss)
+            # self.learning_rate_adapter(self.optimizer, valid_loss)
         return self.model 
 
 
