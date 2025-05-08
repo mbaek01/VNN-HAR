@@ -10,31 +10,30 @@ class VNSensorAttention(nn.Module):
         super(VNSensorAttention, self).__init__()
         self.ln = VNLayerNorm(input_shape[3] // 3)        # input_shape[3] = c_in
         
-        # TODO: test share_nonlinearlity
         # self.conv_1 = nn.Conv2d(in_channels=1, out_channels=nb_units, kernel_size=3, dilation=2, padding='same')
         self.conv_1 = VNLinearLeakyReLU(1, nb_units, dim=5, share_nonlinearity=False, negative_slope=0.2) # kernel_size, dilation ?
         # self.conv_f = nn.Conv2d(in_channels=nb_units, out_channels=1, kernel_size=1, padding='same') #  1x1 conv
         self.conv_f = VNLinearLeakyReLU(nb_units, 1, dim=5, share_nonlinearity=False, negative_slope=0.0)
-        self.softmax = nn.Softmax(dim=3)
+        self.softmax = nn.Softmax(dim=1)
 
         
     def forward(self, inputs):
         '''
-        input: [batch  * length * channel]
-        output: [batch, 1, length, d]
+        input: [B, L, 3, C]
+        output: [B, L, 3, C]
         '''
-        inputs = self.ln(inputs)        # B, L, 3, C      
+        inputs = self.ln(inputs)           # B, L, 3, C      
              
-        x = inputs.unsqueeze(1)         # B, 1, L, 3, C           
+        x = inputs.unsqueeze(1)            # B, 1, L, 3, C           
         
-        x = self.conv_1(x)              # B, nb_units, L, 3, C;  nb_units = 128 // 3
+        x = self.conv_1(x.transpose(1,-1)) # B, C, L, 3, nb_units;  nb_units = 128 // 3
                                     
-        x = self.conv_f(x)              # B, 1, L, 3, C     
+        x = self.conv_f(x)                 # B, C, L, 3, 1     
         
-        x = self.softmax(x) # dim=3; C
-        x = x.squeeze(1)                # B, L, 3, C        
+        x = self.softmax(x) # dim=1 of C
+        x = x.squeeze(-1).permute(0,2,3,1) # B, L, 3, C        
 
-        return torch.mul(inputs, x), x  # (B, L, 3, C), (B, L , 3, C)
+        return torch.mul(inputs, x), x     # (B, L, 3, C), (B, L, 3, C)
         # batch * channel * len, batch * channel * len 
 
 
@@ -88,20 +87,18 @@ class VNEncoderLayer(nn.Module):
         self.dropout2 = nn.Dropout(p=dropout)
 
     def forward(self, x):
-        # x shape: (B, L, 3, C); C = d_model
-
+        '''
+        x shape: (B, L, 3, C) where C = d_model = nb_units // 3
+        '''
         attn_output, attn = self.attention( x, x, x )
-        attn_output = self.dropout1(attn_output)
-        # Shape: (B, L, 3, C); C = d_model
+        attn_output = self.dropout1(attn_output)             # (B, L, 3, C)
 
         out1  = self.layernorm1(x + attn_output)
 
         ffn_output = self.ffn2(self.vn_relu(self.ffn1(out1)))
-        ffn_output = self.dropout2(ffn_output)
-        # Shape: (B, L, 3, C); C = d_model
+        ffn_output = self.dropout2(ffn_output)               # (B, L, 3, C)
 
-        out2 =  self.layernorm2(out1 + ffn_output)
-        # (B, L, 3, C)
+        out2 =  self.layernorm2(out1 + ffn_output)           # (B, L, 3, C)
 
         return out2 
 
@@ -126,20 +123,16 @@ class VNAttentionWithContext(nn.Module):
     def forward(self, x):
         # context = x[:, :-1, :]
         # last = x[:, -1, :]
+        '''
+        x shape: (B, L, 3, C)   where   C = nb_units // 3
+        '''
+        uit = self.activation(self.fc1(x))                                          # (B, L, 3, C)
+       
+        ait = self.fc2(uit)                                                         # (B, L, 3, 1)
+       
+        attn_weights = F.softmax(ait, dim=1).transpose(-1, -3)                      # (B, 1, 3, L)
 
-        # x shape: (B, L, 3, C); C = nb_units // 3
-
-        uit = self.activation(self.fc1(x))
-        # uit shape: (B, L, 3, H); H = nb_units // 3
-
-        ait = self.fc2(uit) 
-        # ait shape: (B, L, 3, 1)
-
-        attn_weights = F.softmax(ait, dim=1).transpose(-1, -3)
-        # shape: (B, 1, 3, L)
-
-        out = torch.einsum('bsik,bkin->bin', attn_weights, x).squeeze(-2) # + last 
-        # shape: (B, 3, C); C = nb_units // 3
+        out = torch.einsum('bsik,bkin->bin', attn_weights, x).squeeze(-2) # + last  # (B, 3, C)
 
         # can also do fc(out) here
         return out

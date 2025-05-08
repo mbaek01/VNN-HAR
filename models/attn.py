@@ -86,17 +86,16 @@ class AttentionWithContext(nn.Module):
     def forward(self, x):
         # context = x[:, :-1, :]
         # last = x[:, -1, :]
-
-        # x shape: (B, L, C); C = nb_units
-        uit = self.activation(self.fc1(x))
-        # uit shape: (B, L, C) C = nb_units
-        ait = self.fc2(uit)
-        # ait shape: (B, L, 1) 
-
-        attn_weights = F.softmax(ait, dim=1).transpose(-1, -2)
-        # (B, 1, L)
-        out = torch.matmul(attn_weights, x).squeeze(-2) # + last 
-        # (B, C); C = nb_units
+        '''
+        x : (B, L, C)   where  C = nb_units
+        '''
+        uit = self.activation(self.fc1(x))                         # (B, L, C) 
+                                    
+        ait = self.fc2(uit)                                        # (B, L, 1) 
+        
+        attn_weights = F.softmax(ait, dim=1).transpose(-1, -2)     # (B, 1, L)
+       
+        out = torch.matmul(attn_weights, x).squeeze(-2) # + last   # (B, C)
         # can also do fc(out) here
         return out
 

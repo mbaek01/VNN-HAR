@@ -243,11 +243,12 @@ def get_setting_name(args):
         return setting
 
     elif args.model_name == "vn_sa_har":
-        setting = "vn_sa_har_data_{}_seed_{}_window_size_{}_num_units_{}_{}".format(
+        setting = "vn_sa_har_data_{}_seed_{}_window_size_{}_num_units_{}_batch_size_{}_{}".format(
             args.data_name,
             args.seed,
             args.windowsize,
             config["nb_units"],
+            args.batch_size,
             args.timestamp
             )
         return setting

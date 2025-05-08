@@ -11,7 +11,7 @@ class VNLinear(nn.Module):
     
     def forward(self, x):
         '''
-        x: point features of shape [B, N_feat, 3, N_samples, ...] if using transpose(1, -1)
+        x: point features of shape [B, ..., 3, C]
         '''
         # x_out = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
         x_out = self.map_to_feat(x)
@@ -29,13 +29,13 @@ class VNLeakyReLU(nn.Module):
     
     def forward(self, x):
         '''
-        x: point features of shape [B, N_feat, 3, N_samples, ...] if using transpose(1, -1)
+        x: point features of shape [B, ..., 3, C]
         '''
         # d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1)
         d = self.map_to_dir(x)
-        dotprod = (x*d).sum(2, keepdim=True)
+        dotprod = (x*d).sum(-2, keepdim=True)
         mask = (dotprod >= 0).float()
-        d_norm_sq = (d*d).sum(2, keepdim=True)
+        d_norm_sq = (d*d).sum(-2, keepdim=True)
         x_out = self.negative_slope * x + (1-self.negative_slope) * (mask*x + (1-mask)*(x-(dotprod/(d_norm_sq+EPS))*d))
         return x_out
 
@@ -59,20 +59,22 @@ class VNLinearLeakyReLU(nn.Module):
     
     def forward(self, x):
         '''
-        x: point features of shape [B, N_feat, 3, N_samples, ...] if using transpose(1, -1)
+        x: point features of shape [B, ..., 3, C]
         '''
         # Linear
-        p = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
-        # p = self.map_to_feat(x)
+        # p = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
+        p = self.map_to_feat(x)
+
         # BatchNorm
         if self.batch_norm:
-            p = self.batchnorm(p) 
+            p = self.batchnorm(p.transpose(1, -1)).transpose(1, -1) 
+
         # LeakyReLU
-        d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1) # k
-        # d = self.map_to_dir(x)
-        dotprod = (p*d).sum(2, keepdims=True)
+        # d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1) # k
+        d = self.map_to_dir(x)
+        dotprod = (p*d).sum(-2, keepdims=True)
         mask = (dotprod >= 0).float()
-        d_norm_sq = (d*d).sum(2, keepdims=True)
+        d_norm_sq = (d*d).sum(-2, keepdims=True)
         x_out = self.negative_slope * p + (1-self.negative_slope) * (mask*p + (1-mask)*(p-(dotprod/(d_norm_sq+EPS))*d))
         return x_out
 
@@ -90,25 +92,41 @@ class VNBatchNorm(nn.Module):
         x: point features of shape [B, N_feat, 3, N_samples, ...] if using transpose(1, -1)
         '''
         # norm = torch.sqrt((x*x).sum(2))
+
+        '''
+        Shape adjustment for VNStdFeature when x is shaped (B, C, 3)
+
+        dim=-2 : 2-norm of vector-list feature dimension (3)
+        '''
+        if x.ndim < 4: 
+            norm = torch.norm(x.unsqueeze(-1), dim=-2).squeeze(-1) + EPS 
+            norm_bn = self.bn(norm)
+            norm = norm.unsqueeze(-2)
+            norm_bn = norm_bn.unsqueeze(-2)
+            x = x.transpose(1,-1) / norm * norm_bn
+
+            return x.transpose(1,-1)
         
-        norm = torch.norm(x, dim=-1) + EPS # normalize on the dimension of C 
-        norm_bn = self.bn(norm)
-        norm = norm.unsqueeze(-1)
-        norm_bn = norm_bn.unsqueeze(-1)
-        x = x / norm * norm_bn
-        
-        return x
+        else: 
+            norm = torch.norm(x, dim=-2) + EPS 
+
+            norm_bn = self.bn(norm)
+            norm = norm.unsqueeze(-2)
+            norm_bn = norm_bn.unsqueeze(-2)
+            x = x / norm * norm_bn
+            
+            return x
 
 
 class VNMaxPool(nn.Module):
+    '''
+    TODO: Dimensions need to be adjusted
+    '''
     def __init__(self, in_channels):
         super(VNMaxPool, self).__init__()
         self.map_to_dir = nn.Linear(in_channels, in_channels, bias=False)
     
     def forward(self, x):
-        '''
-        x: point features of shape [B, N_feat, 3, N_samples, ...] if using transpose(1, -1)
-        '''
         # d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1)
         d = self.map_to_dir(x)
         dotprod = (x*d).sum(2, keepdims=True)
@@ -128,8 +146,8 @@ class VNStdFeature(nn.Module):
         self.dim = dim
         self.normalize_frame = normalize_frame
         
-        self.vn1 = VNLinearLeakyReLU(in_channels, in_channels//2, dim=dim, share_nonlinearity=share_nonlinearity, negative_slope=negative_slope)
-        self.vn2 = VNLinearLeakyReLU(in_channels//2, in_channels//4, dim=dim, share_nonlinearity=share_nonlinearity, negative_slope=negative_slope)
+        self.vn1 = VNLinearLeakyReLU(in_channels, in_channels//2, batch_norm=True, dim=dim, share_nonlinearity=share_nonlinearity, negative_slope=negative_slope)
+        self.vn2 = VNLinearLeakyReLU(in_channels//2, in_channels//4, dim=dim, batch_norm=True, share_nonlinearity=share_nonlinearity, negative_slope=negative_slope)
         if normalize_frame:
             self.vn_lin = nn.Linear(in_channels//4, 2, bias=False)
         else:
@@ -137,22 +155,17 @@ class VNStdFeature(nn.Module):
     
     def forward(self, x):
         '''
-        x: point features of shape [B, N_feat, 3, N_samples, ...] if using transpose(1, -1)
+        x: (B, 3, C),  where C = nb_units // 3
 
-        For vn_sa_har, 
-
-        x shape: (B, 3, 2*C),  where C = nb_units // 3
-
-        in_channel = nb_units // 3 * 2
+        in_channel = nb_units // 3 (*2 when mean is concatenated)
 
         dim = 3
 
-        transpose(1,-1) on z undos the internal transpose inside the VNLinearLeakyReLU function.
         vn1, vn2, vn_lin all performs linear layer on feature vector C
         '''
-        z0 = x                                               # Shape: (B, 3, 2*C)  ; C = nb_units // 3
-        z0 = self.vn1(z0.transpose(1,-1)).transpose(1,-1)    # Shape: (B, 3, C)    ; C = nb_units // 3
-        z0 = self.vn2(z0.transpose(1,-1)).transpose(1,-1)    # Shape: (B, 3, C//2) ; C = nb_units // 3
+        z0 = x                                               # Shape: (B, 3, C)  
+        z0 = self.vn1(z0)                                    # Shape: (B, 3, C//2)    
+        z0 = self.vn2(z0)                                    # Shape: (B, 3, C//4) 
         z0 = self.vn_lin(z0)                                 # Shape: (B, 3, 3)    
         
         if self.normalize_frame:
@@ -193,23 +206,23 @@ class VNLayerNorm(nn.Module):
         self.affine = affine
         self.bias = bias
         if self.affine:
-            # gamma: learnable scale for each feature (D)
-            self.gamma = nn.Parameter(torch.ones(1, 1, 1, d_features))  # shape (1,1,1,D)
+            # gamma: learnable scale for each feature (C)
+            self.gamma = nn.Parameter(torch.ones(1, 1, 1, d_features))  # shape (1,1,1,C)
         if self.bias:
             # Not used for equivariance, but included for completeness
-            self.beta = nn.Parameter(torch.zeros(1, 1, 1, d_features))  # shape (1,1,1,D)
+            self.beta = nn.Parameter(torch.zeros(1, 1, 1, d_features))  # shape (1,1,1,C)
 
     def forward(self, x):
-        # x: (B, L, 3, D)
+        # x: (B, L, 3, C)
         # Compute the norm of each 3D vector (over dim=2)
-        norms = torch.norm(x, dim=2, keepdim=True)  # (B, L, 1, D)
+        norms = torch.norm(x, dim=2, keepdim=True)  # (B, L, 1, C)
         
-        # Compute mean and std over D (feature dimension)
+        # Compute mean and std over C (feature dimension)
         mean = norms.mean(dim=3, keepdim=True)      # (B, L, 1, 1)
         std = norms.std(dim=3, keepdim=True)        # (B, L, 1, 1)
         
         # Normalize norms
-        normed_norms = (norms - mean) / (std + self.eps)  # (B, L, 1, D)
+        normed_norms = (norms - mean) / (std + self.eps)  # (B, L, 1, C)
 
         # Apply scale (and optional bias)
         if self.affine:
@@ -219,5 +232,5 @@ class VNLayerNorm(nn.Module):
 
         # Rescale original vectors to have normalized norms
         safe_norms = norms + self.eps  # avoid division by zero
-        x_normed = x / safe_norms * normed_norms  # (B, L, 3, D)
+        x_normed = x / safe_norms * normed_norms  # (B, L, 3, C)
         return x_normed

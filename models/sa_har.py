@@ -109,24 +109,23 @@ class SA_HAR(nn.Module):
         x = x.squeeze(1) 
         # x -- > (B, L, C)
 	
-        # B L C
-        si, _ = self.SensorAttention(x) 
+        si, _ = self.SensorAttention(x)                   # B L C
+
         
-        # B L C
-        x = self.conv1d(si.permute(0,2,1)).permute(0,2,1) 
+        x = self.conv1d(si.permute(0,2,1)).permute(0,2,1) # B L C
         x = self.relu(x)            
-        # B L C
+        
         #x = x + self.pos_embedding
         #x = self.pos_dropout(x)
 
-        x = self.EncoderLayer1(x)            # batch * len * d_dim
-        x = self.EncoderLayer2(x)            # batch * len * d_dim
+        x = self.EncoderLayer1(x)                         # B, L, C
+        x = self.EncoderLayer2(x)                         # B, L, C
         
         # Global Temporal Attention
-        x = self.AttentionWithContext(x)
+        x = self.AttentionWithContext(x)                  # B, C
 
         x = self.dropout(self.relu(self.fc1(x)))
-        x = self.fc_out(x)
+        x = self.fc_out(x)                              
         
         return x
     
