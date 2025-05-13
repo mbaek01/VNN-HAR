@@ -139,10 +139,12 @@ def set_seed(seed):
     np.random.seed(seed)
 
 class EarlyStopping:
-    """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, patience=7, verbose=False, delta=0):
+    """Early stops the training if f1 macro, or validation loss, doesn't improve after a given patience."""
+    def __init__(self, metric="f1_macro", patience=7, verbose=False, delta=0):
         """
         Args:
+            metric (str): metric used for early stopping - f1_macro or valid_loss
+                            Default: "f1_macro"
             patience (int): How long to wait after last time validation loss improved.
                             Default: 7
             verbose (bool): If True, prints a message for each validation loss improvement. 
@@ -159,15 +161,20 @@ class EarlyStopping:
         self.best_score = None
         self.early_stop = False
         self.val_loss_min = np.inf
+        self.f1_macro_max = -np.inf
         self.delta = delta
+        self.metric = str(metric).lower()
 
-    def __call__(self, val_loss, model, path, f_macro = None, f_weighted = None, log=None):
+    def __call__(self, val_loss, model, path, f_macro, f_weighted = None, log=None):
 
-        score = -val_loss
+        if self.metric == "valid_loss":
+            score = -val_loss
+        elif self.metric == "f1_macro":
+            score = f_macro
 
         if self.best_score is None:
             self.best_score = score
-            self.save_checkpoint(val_loss, model, path ,f_macro, f_weighted)
+            self.save_checkpoint(val_loss, model, path, f_macro, f_weighted)
 
         elif score < self.best_score + self.delta:
             self.counter += 1
@@ -182,15 +189,21 @@ class EarlyStopping:
                 log.write("new best score!!!! Saving model ... \n")
                 log.write("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ \n")
             self.best_score = score
-            self.save_checkpoint(val_loss, model,path, f_macro, f_weighted)
+            self.save_checkpoint(val_loss, model, path, f_macro, f_weighted)
             self.counter = 0
 
-    def save_checkpoint(self, val_loss, model, path, f_macro = None, f_weighted = None):
+    def save_checkpoint(self, val_loss, model, path, f_macro, f_weighted = None):
         '''Saves model when validation loss decrease.'''
         if self.verbose:
-            print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+            if self.metric == "valid_loss":
+                print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+                self.val_loss_min = val_loss
+            elif self.metric == "f1_macro":
+                print(f'F1 Macro increased ({self.f1_macro_max:.6f} --> {f_macro:.6f}).  Saving model ...')
+                self.f1_macro_max = f_macro
+
         torch.save(model.state_dict(), path+'/'+f'best_vali.pth')
-        self.val_loss_min = val_loss
+
 
 class adjust_learning_rate_class:
     def __init__(self, args, verbose):

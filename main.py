@@ -34,9 +34,9 @@ if __name__ == '__main__':
     
     # for test performance aggregation (if args.test==True)
     acc_list = []
-    f_w_list = []
+    # f_w_list = []
     f_macro_list = []
-    f_micro_list = []
+    # f_micro_list = []
 
     # Dataset
     dataset = PAMAP2(args)
@@ -80,20 +80,21 @@ if __name__ == '__main__':
 
             print("Score Log File: ", score_log_file_path)
 
-            acc, f_w, f_macro, f_micro = test_predictions(args, test_loader, curr_save_path, score_log, test_sub)
+            acc, f_macro = test_predictions(args, test_loader, curr_save_path, score_log, test_sub)
 
             acc_list.append(acc)
-            f_w_list.append(f_w)
+            # f_w_list.append(f_w)
             f_macro_list.append(f_macro)
-            f_micro_list.append(f_micro)
+            # f_micro_list.append(f_micro)
 
             # Final mean and std of models
             if test_sub == 8: 
                 score_log.write(f"\n Model: {save_path} \n"
                                 f"Accuracy: mean={np.mean(acc_list):.7f}, std={np.std(acc_list):.7f}\n"
-                                f"F1 Weighted: mean={np.mean(f_w_list):.7f}, std={np.std(f_w_list):.7f}\n"
+                                # f"F1 Weighted: mean={np.mean(f_w_list):.7f}, std={np.std(f_w_list):.7f}\n"
                                 f"F1 Macro: mean={np.mean(f_macro_list):.7f}, std={np.std(f_macro_list):.7f}\n"
-                                f"F1 Micro: mean={np.mean(f_micro_list):.7f}, std={np.std(f_micro_list):.7f}\n")
+                                # f"F1 Micro: mean={np.mean(f_micro_list):.7f}, std={np.std(f_micro_list):.7f}\n"
+                                )
                 score_log.flush()
             
                 print("Testing completed!")

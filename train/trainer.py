@@ -23,8 +23,8 @@ class Trainer:
         self.epoch_log = open(self.epoch_log_file_name, "a")
         self.epochs = args.train_epochs
 
-        self.early_stopping = EarlyStopping(patience=args.early_stop_patience, verbose=True)
-        self.learning_rate_adapter = adjust_learning_rate_class(args, True)
+        self.early_stopping = EarlyStopping(metric="f1_macro", patience=args.early_stop_patience, verbose=True)
+        # self.learning_rate_adapter = adjust_learning_rate_class(args, True)
 
     def train_epoch(self, train_loader):
         self.model.train()
@@ -87,9 +87,9 @@ class Trainer:
         acc = accuracy_score(true_labels, predictions)
         f_w = f1_score(true_labels, predictions, average='weighted')
         f_macro = f1_score(true_labels, predictions, average='macro')
-        f_micro = f1_score(true_labels, predictions, average='micro')
+        # f_micro = f1_score(true_labels, predictions, average='micro')
 
-        return valid_loss, acc, f_w, f_macro, f_micro
+        return valid_loss, acc, f_w, f_macro, # f_micro
 
     def train(self, train_loader, valid_loader):
         print("Epoch Log File: ", self.epoch_log_file_name)
@@ -103,23 +103,25 @@ class Trainer:
             print(f"Epoch: {epoch+1}, train_loss: {train_loss}, Cost time: {epoch_time}")
 
             # Validation phase
-            valid_loss, valid_acc, valid_f_w, valid_f_macro, valid_f_micro = self.validate(valid_loader)
+            valid_loss, valid_acc, valid_f_w, valid_f_macro = self.validate(valid_loader)
             
-            print(f"VALID: Epoch: {epoch+1}, "
+            print(f"VALID: \n Epoch: {epoch+1}, "
                   f"Train Loss: {train_loss:.7f}, "
                   f"Valid Loss: {valid_loss:.7f}, "
                   f"Valid Accuracy: {valid_acc:.7f}, "
-                  f"Valid weighted F1: {valid_f_w:.7f}, "
+                #   f"Valid weighted F1: {valid_f_w:.7f}, "
                   f"Valid macro F1: {valid_f_macro:.7f}, "
-                  f"Valid micro F1: {valid_f_micro:.7f}")
+                #   f"Valid micro F1: {valid_f_micro:.7f}"
+                )
         
             self.epoch_log.write(f"VALID: Epoch: {epoch+1}, "
                                 f"Train Loss: {train_loss:.7f}, "
-                                f"Valid Loss: {valid_loss:.7f}, "
+                                f"Valid Loss: {valid_loss:.7f}, \n"
                                 f"Valid Accuracy: {valid_acc:.7f}, "
-                                f"Valid weighted F1: {valid_f_w:.7f}, "
-                                f"Valid macro F1: {valid_f_macro:.7f}, "
-                                f"Valid micro F1: {valid_f_micro:.7f} \n")
+                                # f"Valid weighted F1: {valid_f_w:.7f}, "
+                                f"Valid macro F1: {valid_f_macro:.7f}, \n"
+                                # f"Valid micro F1: {valid_f_micro:.7f} \n"
+                                )
 
             # Early stopping
             self.early_stopping(valid_loss, self.model, self.curr_save_path, valid_f_macro, valid_f_w, self.epoch_log)
@@ -165,16 +167,16 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
         trues.extend(list(batch_y.detach().cpu().numpy()))
     
     acc = accuracy_score(preds,trues)
-    f_w = f1_score(trues, preds, average='weighted')
+    # f_w = f1_score(trues, preds, average='weighted')
     f_macro = f1_score(trues, preds, average='macro')
-    f_micro = f1_score(trues, preds, average='micro')
+    # f_micro = f1_score(trues, preds, average='micro')
 
     metrics_str = (
         f"Model: {model_path} | test subject: {test_sub} \n"
         f"Accuracy: {acc:.7f} | "
-        f"F1 Weighted: {f_w:.7f} | "
+        # f"F1 Weighted: {f_w:.7f} | "
         f"F1 Macro: {f_macro:.7f} | "
-        f"F1 Micro: {f_micro:.7f} \n"
+        # f"F1 Micro: {f_micro:.7f} \n"
     )
     print(metrics_str)
 
@@ -185,4 +187,4 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
 
     print("Test Complete!")
 
-    return acc, f_w, f_macro, f_micro
+    return acc, f_macro
