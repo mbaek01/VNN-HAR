@@ -175,7 +175,7 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
         f"Model: {model_path} | test subject: {test_sub} \n"
         f"Accuracy: {acc:.7f} | "
         # f"F1 Weighted: {f_w:.7f} | "
-        f"F1 Macro: {f_macro:.7f} | "
+        f"F1 Macro: {f_macro:.7f} | \n"
         # f"F1 Micro: {f_micro:.7f} \n"
     )
     print(metrics_str)

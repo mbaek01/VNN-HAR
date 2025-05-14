@@ -60,7 +60,8 @@ class VN_SA_HAR(nn.Module):
 
     def forward(self, x):
         '''
-        x: [B, 1, L, 3(xyz), C]     where   C = self.nb_units
+        x: [B, 1, L, C] -> [B, 1, L, 3(xyz), C]    
+        and C -> self.nb_units
         '''
         x = vn_c_reshape(x, self.time_length)                 # (B, 1, L, 3, C);
       

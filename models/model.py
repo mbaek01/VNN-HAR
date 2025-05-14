@@ -11,6 +11,7 @@ from .deepconvlstm import DeepConvLSTM
 from .deepconvlstm_attn import DeepConvLSTM_ATTN
 from .vn_baseline_attn import VN_Baseline_Attn
 from .vn_sa_har import VN_SA_HAR
+from .eq_deepconvlstm import EqDeepConvLSTM
 
 class Model(object):
     def __init__(self, args):
@@ -101,6 +102,12 @@ class model_builder(nn.Module):
                                            config
                                            )
             print(f"Model: deepconvlstm_attn")
+
+        elif args.model_name == "eq_deepconvlstm":
+            self.model = EqDeepConvLSTM(input_shape,
+                                        args.num_classes,
+                                        config)
+            print(f"Model: eq_deepconvlstm")
 
         # elif args.model_name == "baseline":
         #     self.model = Baseline(int(args.input_length * args.c_in),

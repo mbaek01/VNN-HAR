@@ -253,7 +253,6 @@ def get_setting_name(args):
             config["nb_units"],
             args.timestamp
             )
-        return setting
 
     elif args.model_name == "vn_sa_har":
         setting = "vn_sa_har_data_{}_seed_{}_window_size_{}_num_units_{}_batch_size_{}_{}".format(
@@ -264,7 +263,6 @@ def get_setting_name(args):
             args.batch_size,
             args.timestamp
             )
-        return setting
 
     elif args.model_name == "deepconvlstm":
         setting = "deepconvlstm_data_{}_seed_{}_windowsize_{}_cvfilter_{}_lstmfilter_{}_{}".format(
@@ -275,7 +273,6 @@ def get_setting_name(args):
             config["nb_units_lstm"],
             args.timestamp
             )
-        return setting
     
     elif args.model_name == "deepconvlstm_attn":
         setting = "deepconvlstm_attn_data_{}_seed_{}_windowsize_{}_cvfilter_{}_lstmfilter_{}_{}".format(
@@ -286,8 +283,16 @@ def get_setting_name(args):
             config["nb_units_lstm"],
             args.timestamp
             )
-        return setting
-    
+
+    elif args.model_name == "eq_deepconvlstm":
+        setting = "eq_deepconvlstm_attn_data_{}_seed_{}_windowsize_{}_nb_fields_{}_lstmfilter_{}_{}".format(
+            args.data_name,
+            args.seed,
+            args.windowsize,
+            config["nb_fields"],
+            config["nb_units_lstm"],
+            args.timestamp
+        )
     # elif args.model_name== "baseline":
     #     setting = "baseline_data_{}_seed_{}_windowsize_{}_{}".format(
     #         args.data_name,
@@ -331,6 +336,8 @@ def get_setting_name(args):
 
     else:
         raise NotImplementedError
+    
+    return setting
     
 def vn_c_reshape(x, time_length):
     # For PAMAP only!!
