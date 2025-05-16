@@ -6,6 +6,8 @@ from escnn import gspaces, nn as escnn_nn
 class EqConvBlock(nn.Module):
     """
     SO(3)-equivariant convolution block using escnn
+
+    A guide on keeping accurate equivariance: https://quva-lab.github.io/escnn/api/conv_notes.html
     """
     def __init__(self, filter_width, input_fields, nb_fields, dilation, batch_norm):
         super().__init__()
@@ -15,41 +17,43 @@ class EqConvBlock(nn.Module):
         self.dilation = dilation
         self.batch_norm = batch_norm
 
-        # 1. Define SO(3) group action
+        # Define SO(3) group action
         self.gspace = gspaces.rot3dOnR3()
 
-        # 2. Define feature types
+        # Define feature types
         self.feat_type_in = escnn_nn.FieldType(self.gspace, self.input_fields * [self.gspace.irrep(1)])
-        self.feat_type_out = escnn_nn.FieldType(self.gspace, self.nb_fields * [self.gspace.irrep(1)])
+        self.feat_type_hidden = escnn_nn.FieldType(self.gspace, self.nb_fields * [self.gspace.irrep(1)])
 
-        # 3. First equivariant convolution
-        self.conv1 = escnn_nn.R2Conv(
+        # equivariant convolution
+        self.conv1 = escnn_nn.R3Conv(
             self.feat_type_in,
-            self.feat_type_out,
+            self.feat_type_hidden,
             kernel_size=self.filter_width,      # only square filters available
             dilation=self.dilation,
-            padding="replicate",
+            padding_mode="replicate",
         )
 
-        # 4. Equivariant BatchNorm and nonlinearity
+        #  Equivariant BatchNorm and nonlinearity
         if self.batch_norm:
-            self.norm1 = escnn_nn.InnerBatchNorm(self.feat_type_out)
-        self.relu = escnn_nn.NormNonLinearity(self.feat_type_out)
+            self.norm1 = escnn_nn.InnerBatchNorm(self.feat_type_hidden)
+            self.norm2 = escnn_nn.InnerBatchNorm(self.feat_type_hidden)
 
-        # 5. Second equivariant convolution with stride
-        self.conv2 = escnn_nn.R2Conv(
-            self.feat_type_out,
-            self.feat_type_out,
-            kernel_size=(self.filter_width, 1),
-            dilation=(self.dilation, 1),
-            padding=(self.dilation * (self.filter_width - 1) // 2, 0),
-            stride=(2, 1)  # Reduces temporal dimension by half
+        self.relu = escnn_nn.NormNonLinearity(self.feat_type_hidden)
+
+        # Second equivariant convolution with stride
+        self.conv2 = escnn_nn.R3Conv(
+            self.feat_type_hidden,
+            self.feat_type_hidden,
+            kernel_size=self.filter_width,
+            dilation=self.dilation,
+            padding_mode="replicate",
+            stride=3
         )
-
-        if self.batch_norm:
-            self.norm2 = escnn_nn.InnerBatchNorm(self.feat_type_out)
 
     def forward(self, x: torch.Tensor):
+        # Wrap input as GeometricTensor
+        x = escnn_nn.GeometricTensor(x, self.feat_type_in)
+
         # First conv block
         out = self.conv1(x)
         out = self.relu(out)
@@ -108,7 +112,6 @@ class EqDeepConvLSTM(nn.Module):
     
             self.conv_blocks.append(EqConvBlock(self.filter_width, input_filters, self.nb_fields, self.dilation, self.batch_norm))
 
-        
         self.conv_blocks = nn.ModuleList(self.conv_blocks)
         
         # define lstm layers
@@ -131,9 +134,6 @@ class EqDeepConvLSTM(nn.Module):
         '''
         # reshape data for convolutions
         x = x.squeeze(1).transpose(1,2)                                           # (B, 3, L, C)
-
-        # Wrap input as GeometricTensor
-        x = escnn_nn.GeometricTensor(x, self.feat_type_in)
         
         for i, conv_block in enumerate(self.conv_blocks):
             x = conv_block(x)
