@@ -40,7 +40,7 @@ class Baseline(nn.Module):
         return out
 
 class Baseline_Attn(nn.Module):
-    def __init__(self, in_dim, nb_classes,  nb_units, activation_fn, attn_act_fn = "tanh"):
+    def __init__(self, in_dim, nb_classes, nb_units, activation_fn, attn_act_fn = "tanh"):
         super().__init__()
         self.nb_units = nb_units
         self.activation_fn = activation_fn()

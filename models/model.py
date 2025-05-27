@@ -108,6 +108,22 @@ class model_builder(nn.Module):
                                         args.num_classes,
                                         config)
             print(f"Model: eq_deepconvlstm")
+        
+        elif args.model_name =="baseline_attn":
+            self.model = Baseline_Attn(args.c_in,
+                                       args.num_classes,
+                                       config["nb_units"],
+                                       self.activation_fn_dict[args.activation_fn]
+                                      )
+            print("Model: baseline_attn")
+        
+        elif args.model_name == "vn_baseline_attn":
+            self.model = VN_Baseline_Attn(input_shape,
+                                          args.num_classes,
+                                          config["nb_units"],
+                                          config["activation_fn"]
+                                          )
+            print("Model: vn_baseline_attn")
 
         # elif args.model_name == "baseline":
         #     self.model = Baseline(int(args.input_length * args.c_in),
@@ -116,22 +132,6 @@ class model_builder(nn.Module):
         #                         )
 
         #     print("Model: baseline")
-        
-        # elif args.model_name =="baseline_attn":
-        #     self.model = Baseline_Attn(args.c_in,
-        #                                 args.num_classes,
-        #                                 config["nb_units"],
-        #                                 self.activation_fn_dict[args.activation_fn]
-        #                         )
-        #     print("Model: baseline_attn")
-        
-        # elif args.model_name == "vn_baseline_attn":
-        #     self.model = VN_Baseline_Attn(input,
-        #                                   args.num_classes,
-        #                                   config["nb_units"],
-        #                                   config["activation_fn"]
-        #                                   )
-        #     print("Model: baseline_attn")
 
         # elif args.model_name == "vnn_mlp":
         #     self.model = VNN_MLP(args.batch_size, args.input_length, args.c_in, args.num_classes)

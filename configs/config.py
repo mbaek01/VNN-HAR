@@ -17,7 +17,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='Rotation-Invariant HAR Classification using Vector Neuron Network')
     parser.add_argument('-d', '--data_name', default='pamap2', type=str, help='Name of the Dataset')
 
-    parser.add_argument('-m', '--model_name', default='baseline_attn', type=str, help="Name of the Model") 
+    parser.add_argument('-m', '--model_name', default='deepconvlstm', type=str, help="Name of the Model") 
     '''
     Available Models: deepconvlstm_attn,
                       deepconvlstm,
@@ -44,7 +44,6 @@ def get_args():
 
     # if only args.test == True, need to specify the folder of the testing models
     args.test_path = ""
-
     args.use_gpu = True if torch.cuda.is_available() else False
     args.use_multi_gpu = True
     args.devices = "0,1,2,3,4,5,6,7" # available gpus
@@ -56,7 +55,7 @@ def get_args():
     args.activation_fn = "relu"
 
     # training settings
-    args.train_epochs = 150
+    args.train_epochs = 300
     args.learning_rate = 0.001 # 0.0001
     args.learning_rate_patience = 7
     args.learning_rate_factor = 0.1

@@ -9,23 +9,29 @@ class VNConvBlock(nn.Module):
     """
     Vector-Neuron Replacement for ConvBlock
     """
-    def __init__(self, filter_width, input_filters, nb_units, batch_norm):
+    def __init__(self, input_filters, nb_units, batch_norm):
         super(VNConvBlock, self).__init__()
-        self.filter_width = filter_width
+        # self.filter_width = filter_width
         self.input_filters = input_filters
         self.nb_units = nb_units
         self.batch_norm = batch_norm
 
-        # TODO: test with share_nonlinearity 
         self.conv1 = VNLinearLeakyReLU(self.input_filters, self.nb_units, batch_norm=self.batch_norm, dim=5, negative_slope=0.0)
-        self.conv2 = VNLinearLeakyReLU(self.nb_units, 1, batch_norm=self.batch_norm, dim=5)
+        # self.conv2 = VNLinearLeakyReLU(self.nb_units, self.nb_units, batch_norm=self.batch_norm, dim=5, negative_slope=0.0)
+        # self.conv3 = VNLinearLeakyReLU(self.nb_units, self.nb_units, batch_norm=self.batch_norm, dim=5, negative_slope=0.0)
+
+        self.conv4 = VNLinearLeakyReLU(self.nb_units, 1, batch_norm=self.batch_norm, dim=5)
 
     def forward(self, x):
         # x: (B, 1, L, 3, C)
                                               # (B, C, L, 3, 1)
         out = self.conv1(x.transpose(1, -1))  # (B, C, L, 3, nb_units)
 
-        out = self.conv2(out)                 # (B, C, L, 3, 1)
+        # out = self.conv2(out)                 # (B, C, L, 3, nb_units)
+
+        # out = self.conv3(out)                 # (B, C, L, 3, nb_units)
+
+        out = self.conv4(out)                 # (B, C, L, 3, 1)
 
         return out.transpose(1, -1)           # (B, 1, L, 3, C)
 
@@ -37,7 +43,7 @@ class VN_SA_HAR(nn.Module):
         self.time_length = input_shape[2] # L
         self.nb_units = nb_units // 3
 
-        self.first_conv = VNConvBlock(filter_width=5, 
+        self.first_conv = VNConvBlock(# filter_width=5, 
                                       input_filters=input_shape[1], # f_in
                                       nb_units=self.nb_units, 
                                       batch_norm=True).double()

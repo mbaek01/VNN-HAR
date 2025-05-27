@@ -293,6 +293,27 @@ def get_setting_name(args):
             config["nb_units_lstm"],
             args.timestamp
         )
+
+    elif args.model_name== "baseline_attn":
+        setting = "baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
+            args.data_name,
+            config["nb_units"],
+            config["activation_fn"],
+            args.seed,
+            args.windowsize,
+            args.timestamp
+            )
+
+    elif args.model_name== "vn_baseline_attn":
+        setting = "vn_baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
+            args.data_name,
+            config["nb_units"],
+            config["activation_fn"],
+            args.seed,
+            args.windowsize,
+            args.timestamp
+            )
+
     # elif args.model_name== "baseline":
     #     setting = "baseline_data_{}_seed_{}_windowsize_{}_{}".format(
     #         args.data_name,
@@ -300,38 +321,14 @@ def get_setting_name(args):
     #         args.windowsize,
     #         args.timestamp
     #         )
-    #     return setting
-    
-    # elif args.model_name== "baseline_attn":
-    #     setting = "baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
-    #         args.data_name,
-    #         config["nb_units"],
-    #         config["activation_fn"],
-    #         args.seed,
-    #         args.windowsize,
-    #         args.timestamp
-    #         )
-    #     return setting
 
-    # elif args.model_name== "vn_baseline_attn":
-    #     setting = "vn_baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
-    #         args.data_name,
-    #         config["nb_units"],
-    #         config["activation_fn"],
-    #         args.seed,
-    #         args.windowsize,
-    #         args.timestamp
-    #         )
-    #     return setting
-
-    
     # elif args.model_name== "vnn_mlp":
     #     setting = "vnn_mlp_data_{}_seed_{}_windowsize_{}_{}".format(
     #         args.data_name,
     #         args.seed,
     #         args.windowsize
     #         )
-    #     return setting
+
     
 
     else:
