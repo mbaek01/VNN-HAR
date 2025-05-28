@@ -313,6 +313,15 @@ def get_setting_name(args):
             args.windowsize,
             args.timestamp
             )
+        
+    elif args.model_name== "vn_inv_baseline_attn":
+        setting = "vn_inv_baseline_attn_data_{}_nb_unit_{}_seed_{}_windowsize_{}_{}".format(
+            args.data_name,
+            config["nb_units"],
+            args.seed,
+            args.windowsize,
+            args.timestamp
+            )
 
     # elif args.model_name== "baseline":
     #     setting = "baseline_data_{}_seed_{}_windowsize_{}_{}".format(

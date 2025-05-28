@@ -57,11 +57,11 @@ class VNAttentionLayer(nn.Module):
         keys = self.key(keys).view(B, L, 3, H, -1)
         values = self.value(values).view(B, L, 3, H, -1)
 
-        score = torch.einsum("blvhd, bsvhd->bhls", queries, keys)
+        score = torch.einsum("blvhd, bsvhd->bhvls", queries, keys)
         _, _, _, _, E = queries.shape
         scale = 1./math.sqrt(E)
         Attn = torch.softmax(scale * score, dim=-1)
-        V = torch.einsum("bhls,bsvhd->blvhd", Attn, values).contiguous()
+        V = torch.einsum("bhvls,bsvhd->blvhd", Attn, values).contiguous()
 
         # Merge heads: (B, L, 3, d_model)
         out = V.view(B, L, 3, -1)
@@ -117,8 +117,6 @@ class VNAttentionWithContext(nn.Module):
             raise NotImplementedError
         
         self.fc2 = VNLinear(hidden_dim, 1)
-
-        self.dropout = nn.Dropout(0.2)
 
     def forward(self, x):
         # context = x[:, :-1, :]

@@ -46,7 +46,7 @@ def get_args():
     args.test_path = ""
     args.use_gpu = True if torch.cuda.is_available() else False
     args.use_multi_gpu = True
-    args.devices = "0,1,2,3,4,5,6,7" # available gpus
+    args.devices = "0,1" # available gpus # ,2,3,4,5,6,7
 
     args.optimizer = "Adam"
     args.criterion = "CrossEntropy"

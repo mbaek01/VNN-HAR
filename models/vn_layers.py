@@ -183,18 +183,33 @@ class VNStdFeature(nn.Module):
             # compute the cross product of the two output vectors        
             u3 = torch.cross(u1, u2)
             z0 = torch.stack([u1, u2, u3], dim=1).transpose(1, 2)
-        else:
-            z0 = z0.transpose(1, 2)     # shape :(B, 3, 3(hidden)) to (B, 3(hidden), 3)
+        # else:
+        #     z0 = z0.transpose(1, 2)     # shape :(B, 3, 3(hidden)) to (B, 3(hidden), 3)
             
-        
+        '''
+            j = Initial x,y,z dimension of 3 
+            k = Dimension D linearly transformed to 3
+        '''
         if self.dim == 4:
-            x_std = torch.einsum('bijm,bjkm->bikm', x, z0) # not adjusted 
+            x_std = torch.einsum('blji, bljk-> blki', x, z0) 
+            # Shape:
+            # x:  (B, L, 3, D)
+            # z0: (B, L, 3, 3)
+            # ->  (B, L, 3, D)
+            
         elif self.dim == 3:
-            x_std = torch.einsum('bji,bkj->bik', x, z0) # adjusted from bij,bjk->bik
+            x_std = torch.einsum('bjd, bjk ->bdk', x, z0) 
             # Shape: 
-            # x:(B, 3, C) ,  z0:(B, 3, 3) -> (B, C, 3)
+            # x:  (B, 3, D),  
+            # z0: (B, 3, 3) 
+            # ->  (B, D, 3)
+
         elif self.dim == 5:
-            x_std = torch.einsum('bijmn,bjkmn->bikmn', x, z0) # not adjusted
+            x_std = torch.einsum('bljhd,bljhk->blkhd', x, z0) 
+            # Shape:
+            # x:  (B, L, 3, H, D),  
+            # z0: (B, L, 3, H, 3),
+            # ->  (B, L, 3, H, D)
         
         return x_std, z0
     

@@ -81,8 +81,6 @@ class AttentionWithContext(nn.Module):
         
         self.fc2 = nn.Linear(hidden_dim, 1, bias=False)
 
-        self.dropout = nn.Dropout(0.2)
-
     def forward(self, x):
         # context = x[:, :-1, :]
         # last = x[:, -1, :]

@@ -11,6 +11,9 @@ vn_baseline_attn:
   nb_units: 120 # 120 // 3 has to be multiple sof num_head(=4) in attn 
   activation_fn: vn_leaky_relu
   
+vn_inv_baseline_attn:
+  nb_units: 120 # 120 // 3 has to be multiple sof num_head(=4) in attn 
+
 vnn_mlp:
   num_layers: 5
   num_units: 128

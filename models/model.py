@@ -9,7 +9,7 @@ from .vnn_mlp import VNN_MLP
 from .sa_har import SA_HAR
 from .deepconvlstm import DeepConvLSTM
 from .deepconvlstm_attn import DeepConvLSTM_ATTN
-from .vn_baseline_attn import VN_Baseline_Attn
+from .vn_baseline_attn import VN_Baseline_Attn, VN_Inv_Baseline_Attn
 from .vn_sa_har import VN_SA_HAR
 # from .eq_deepconvlstm import EqDeepConvLSTM
 
@@ -125,6 +125,12 @@ class model_builder(nn.Module):
                                           )
             print("Model: vn_baseline_attn")
 
+        elif args.model_name == "vn_inv_baseline_attn":
+            self.model = VN_Inv_Baseline_Attn(input_shape,
+                                          args.num_classes,
+                                          config["nb_units"],
+                                          )
+            print("Model: vn_inv_baseline_attn")
         # elif args.model_name == "baseline":
         #     self.model = Baseline(int(args.input_length * args.c_in),
         #                         args.num_classes,
