@@ -6,9 +6,8 @@ pyyaml>=5.1
 scikit-learn
 tqdm
 datetime
-pickle
 scikit-learn
 
-#sudo apt install gfortran
-escnn
+# sudo apt install gfortran
+# escnn
 # pip install git+https://github.com/QUVA-Lab/escnn

@@ -50,7 +50,7 @@ class VN_Baseline_Attn(nn.Module):
         # x_mean = x.mean(dim=-1, keepdim=True).expand(x.size())
         # x = torch.cat((x, x_mean), 2)
         
-        # x, trans = self.std_feature(x)
+        x, trans = self.std_feature(x)
         # Shape: (B, C, 3)
 
         x = x.view(batch_temp, -1) # x = x.view(self.batch_size, -1, N)

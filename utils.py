@@ -284,15 +284,15 @@ def get_setting_name(args):
             args.timestamp
             )
 
-    elif args.model_name == "eq_deepconvlstm":
-        setting = "eq_deepconvlstm_attn_data_{}_seed_{}_windowsize_{}_nb_fields_{}_lstmfilter_{}_{}".format(
-            args.data_name,
-            args.seed,
-            args.windowsize,
-            config["nb_fields"],
-            config["nb_units_lstm"],
-            args.timestamp
-        )
+    # elif args.model_name == "eq_deepconvlstm":
+    #     setting = "eq_deepconvlstm_attn_data_{}_seed_{}_windowsize_{}_nb_fields_{}_lstmfilter_{}_{}".format(
+    #         args.data_name,
+    #         args.seed,
+    #         args.windowsize,
+    #         config["nb_fields"],
+    #         config["nb_units_lstm"],
+    #         args.timestamp
+    #     )
 
     elif args.model_name== "baseline_attn":
         setting = "baseline_attn_data_{}_nb_unit_{}_act_fn_{}_seed_{}_windowsize_{}_{}".format(
