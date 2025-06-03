@@ -24,7 +24,9 @@ class Trainer:
         self.epochs = args.train_epochs
 
         self.early_stopping = EarlyStopping(metric="f1_macro", patience=args.early_stop_patience, verbose=True)
-        # self.learning_rate_adapter = adjust_learning_rate_class(args, True)
+        self.learning_rate_adapter_use = args.learning_rate_adapter
+        if self.learning_rate_adapter_use:
+            self.learning_rate_adapter = adjust_learning_rate_class(args, True)
 
     def train_epoch(self, train_loader):
         self.model.train()
@@ -67,7 +69,6 @@ class Trainer:
                 # Applying rotation to the data
                 if self.train_rot in ["so3", "z"]:
                     batch_x1 = rotation(batch_x1, self.train_rot, self.device)
-
 
                 outputs = self.model(batch_x1)
                 loss = self.criterion(outputs, batch_y)
@@ -132,7 +133,8 @@ class Trainer:
             self.epoch_log.flush()
             
             # Learning rate adapter
-            # self.learning_rate_adapter(self.optimizer, valid_loss)
+            if self.learning_rate_adapter_use:
+                self.learning_rate_adapter(self.optimizer, valid_loss)
         return self.model 
 
 

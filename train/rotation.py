@@ -21,9 +21,9 @@ Device = Union[str, torch.device]
 def rotation(batch_x1, rot, device):
     # batch_x1: (B, 1, L, C)
     time_length = batch_x1.size(2)
-    batch_x1 = vn_c_reshape(batch_x1, time_length) # (B, L, C) -> (B, L, 3, C//3)
+    batch_x1 = vn_c_reshape(batch_x1, time_length).squeeze(1)           # (B, 1, L, C) -> (B, L, 3, C//3)
 
-    batch_x1 = batch_x1.transpose(-2, -1) # (B, L, C//3, 3)
+    batch_x1 = batch_x1.transpose(-2, -1)                               # (B, L, C//3, 3)
 
     trot = None
 
@@ -38,8 +38,8 @@ def rotation(batch_x1, rot, device):
         batch_x1_rot = trot.transform_points(batch_x1)
 
     # back to original input shape 
-    batch_x1_rot = batch_x1_rot.flatten(start_dim=-2) # (B, L, C)
-    batch_x1_rot = batch_x1_rot.unsqueeze(1) # (B, 1, L ,C) - original shape
+    batch_x1_rot = batch_x1_rot.transpose(-1,-2).flatten(start_dim=-2) # (B, L, C)
+    batch_x1_rot = batch_x1_rot.unsqueeze(1)                           # (B, 1, L ,C) - original shape
 
     return batch_x1_rot
 
@@ -151,7 +151,7 @@ class Rotate:
         # points_out = self._broadcast_bmm(points_batch, self.rotation) # (N, P, 3) @ (N, 3, 3)
 
         B, L, C, _ = points_batch.shape
-        points_batch = points_batch.reshape(B, -1, 3)
+        points_batch = points_batch.reshape(B, L*C, 3)      # (B, L*C, 3)
 
         points_out = torch.bmm(points_batch, self.rotation)
         points_out = points_out.view(B, L, C, 3)

@@ -116,7 +116,7 @@ class VNAttentionWithContext(nn.Module):
         else:
             raise NotImplementedError
         
-        self.fc2 = VNLinear(hidden_dim, 1)
+        self.fc2 = nn.Linear(hidden_dim, 1)
 
     def forward(self, x):
         # context = x[:, :-1, :]
