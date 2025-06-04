@@ -246,11 +246,14 @@ def get_setting_name(args):
     config = yaml.load(config_file, Loader=yaml.FullLoader)[args.model_name]
 
     if args.model_name == "sa_har":
-        setting = "sa_har_data_{}_seed_{}_window_size_{}_num_units_{}_{}".format(
+        setting = "sa_har_data_{}_seed_{}_window_size_{}_num_units_{}_lr_{}_rot_{}_lr_scheduler_{}_{}".format(
             args.data_name,
             args.seed,
             args.windowsize,
             config["nb_units"],
+            args.learning_rate,
+            "_".join([args.train_rot, args.test_rot]),
+            args.learning_rate_adapter,
             args.timestamp
             )
 
