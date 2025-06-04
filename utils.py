@@ -305,20 +305,22 @@ def get_setting_name(args):
             )
 
     elif args.model_name== "vn_baseline_attn":
-        setting = "vn_baseline_attn_data_{}_nb_unit_{}_lr_{}_lr_scheduler_{}_seed_{}_{}".format(
+        setting = "vn_baseline_attn_data_{}_nb_unit_{}_lr_{}_rot_{}_lr_scheduler_{}_seed_{}_{}".format(
             args.data_name,
             config["nb_units"],
             args.learning_rate,
+            "_".join([args.train_rot, args.test_rot]),
             args.learning_rate_adapter,
             args.seed,
             args.timestamp
             )
         
     elif args.model_name== "vn_inv_baseline_attn":
-        setting = "vn_inv_baseline_attn_data_{}_nb_unit_{}_lr_{}_lr_scheduler_{}_seed_{}_{}".format(
+        setting = "vn_inv_baseline_attn_data_{}_nb_unit_{}_lr_{}_rot_{}_lr_scheduler_{}_seed_{}_{}".format(
             args.data_name,
             config["nb_units"],
             args.learning_rate,
+            "_".join([args.train_rot, args.test_rot]),
             args.learning_rate_adapter,
             args.seed,
             args.timestamp
