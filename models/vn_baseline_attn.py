@@ -34,33 +34,33 @@ class VN_Inv_Baseline_Attn(nn.Module):
         self.dropout = nn.Dropout(p=0.2)
         self.fc_out = nn.Linear(4*nb_classes, nb_classes)
     
-    def forward(self, x):                                   # (B, 1, L, C)
+    def forward(self, x):                                                # (B, 1, L, C)
 
         # reshape C -> 3, C//3
-        x = vn_c_reshape(x, self.time_length).squeeze(1)    # (B, L, 3, C//3)
+        x = vn_c_reshape(x, self.time_length).squeeze(1).transpose(1,-1) # (B, C//3, 3, L)
 
         # Initial fc layer
-        x = self.vn_act(self.fc1(x))                        # (B, L, 3, D)
+        x = self.vn_act(self.fc1(x))                                     # (B, D, 3, L)
 
         # Self-Attention Encoder
-        x = self.VNInvEncoderLayer1(x)                      # (B, L, 3, D)
-        x = self.VNInvEncoderLayer2(x)                      # (B, L, 3, D)
+        x = self.VNInvEncoderLayer1(x)                                   # (B, D, 3, L)
+        x = self.VNInvEncoderLayer2(x)                                   # (B, D, 3, L)
 
         # Global Temporal Attention
-        x = self.VNInvAttentionWithContext(x)               # (B, 3, D)
+        x = self.VNInvAttentionWithContext(x)                            # (B, D, 3)
 
         # Final Invariant Layer
         batch_temp = x.size(0)
         # x_mean = x.mean(dim=-1, keepdim=True).expand(x.size())
         # x = torch.cat((x, x_mean), 2)
-        x, _ = self.std_feature(x)                          # (B, D, 3)
+        x, _ = self.std_feature(x)                                       # (B, D, 3)
 
         # MLP Classifier
-        x = x.view(batch_temp, -1)                          # (B, 3*D)
+        x = x.view(batch_temp, -1)                                       # (B, D*3)
         
-        x = self.dropout(self.relu(self.fc2(x)))            # (B, 4*N); N = num classes
+        x = self.dropout(self.relu(self.fc2(x)))                         # (B, 4*N); N = num classes
 
-        out = self.fc_out(x)                                # (B, N)
+        out = self.fc_out(x)                                             # (B, N)
 
         return out
 
@@ -90,36 +90,27 @@ class VN_Baseline_Attn(nn.Module):
         self.dropout = nn.Dropout(p=0.2)
         self.fc_out = nn.Linear(4*nb_classes, nb_classes)
 
-    def forward(self, x):
-        # Shape: (B, 1, L, C); C = nb_units
-        x = vn_c_reshape(x, self.time_length)
-        # Shape: (B, 1, L, 3, C); C = nb_units // 3
+    def forward(self, x):                                                 # (B, 1, L, C)
+        x = vn_c_reshape(x, self.time_length).squeeze(1).transpose(1,-1)  # (B, C//3, 3, L)
 
-        x = self.vn_act(self.fc1(x)).squeeze(1)
-        # Shape: (B, L, 3, C); C = nb_units // 3
+        x = self.vn_act(self.fc1(x))                                      # (B, D, 3, L)
         
-        x = self.VNEncoderLayer1(x)
-        # Shape: (B, L, 3, C); C = nb_units // 3
-        x = self.VNEncoderLayer2(x)
-        # Shape: (B, L, 3, C); C = nb_units // 3
-        x = self.VNAttentionWithContext(x)
-        # Shape: (B, 3, C); C = nb_units // 3
+        x = self.VNEncoderLayer1(x)                                       # (B, D, 3, L)
+        x = self.VNEncoderLayer2(x)                                       # (B, D, 3, L)
+
+        x = self.VNAttentionWithContext(x)                                # (B, D, 3)
 
         # N = x.size(-1)
         batch_temp = x.size(0)
         # x_mean = x.mean(dim=-1, keepdim=True).expand(x.size())
         # x = torch.cat((x, x_mean), 2)
         
-        x, trans = self.std_feature(x)
-        # Shape: (B, C, 3)
+        x, trans = self.std_feature(x)                                    # (B, D, 3)
 
-        x = x.view(batch_temp, -1) # x = x.view(self.batch_size, -1, N)
-        # Shape: (B, C*3)
+        x = x.view(batch_temp, -1)                                        # (B, D*3)
 
-        x = self.dropout(self.relu(self.fc2(x)))
-        # Shape: (B, 4*nb_classes)
+        x = self.dropout(self.relu(self.fc2(x)))                          # (B, 4*N); N = num classes
 
-        out = self.fc_out(x)
-        # Shape: (B, nb_classes)
+        out = self.fc_out(x)                                              # (B, N)
 
         return out

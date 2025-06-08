@@ -4,7 +4,7 @@ import torch.nn as nn
 from .vn_attn import VNSensorAttention, VNEncoderLayer, VNAttentionWithContext
 from .vn_layers import VNLinearLeakyReLU, VNStdFeature
 from utils import vn_c_reshape
-
+# TODO: input shape to [B, C, 3, L, ...]
 class VNConvBlock(nn.Module):
     """
     Vector-Neuron Replacement for ConvBlock

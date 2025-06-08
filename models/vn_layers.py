@@ -11,10 +11,10 @@ class VNLinear(nn.Module):
     
     def forward(self, x):
         '''
-        x: point features of shape [B, ..., 3, C]
+        x: point features of shape [B, N_feat, 3, N_samples, ...]
         '''
-        # x_out = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
-        x_out = self.map_to_feat(x)
+        x_out = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
+        # x_out = self.map_to_feat(x)
         return x_out
 
 
@@ -29,13 +29,13 @@ class VNLeakyReLU(nn.Module):
     
     def forward(self, x):
         '''
-        x: point features of shape [B, ..., 3, C]
+        x: point features of shape [B, N_feat, 3, N_samples, ...]
         '''
-        # d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1)
-        d = self.map_to_dir(x)
-        dotprod = (x*d).sum(-2, keepdim=True)
+        d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1)
+        # d = self.map_to_dir(x)
+        dotprod = (x*d).sum(2, keepdim=True)
         mask = (dotprod >= 0).float()
-        d_norm_sq = (d*d).sum(-2, keepdim=True)
+        d_norm_sq = (d*d).sum(2, keepdim=True)
         x_out = self.negative_slope * x + (1-self.negative_slope) * (mask*x + (1-mask)*(x-(dotprod/(d_norm_sq+EPS))*d))
         return x_out
 
@@ -59,24 +59,25 @@ class VNLinearLeakyReLU(nn.Module):
     
     def forward(self, x):
         '''
-        x: point features of shape [B, ..., 3, C]
+        x: point features of shape [B, N_feat, 3, N_samples, ...]
         '''
         # Linear
-        # p = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
-        p = self.map_to_feat(x)
+        p = self.map_to_feat(x.transpose(1,-1)).transpose(1,-1)
+        # p = self.map_to_feat(x)
 
         # BatchNorm
         if self.batch_norm:
-            p = self.batchnorm(p.transpose(1, -1)).transpose(1, -1) 
+            p = self.batchnorm(p)
 
         # LeakyReLU
-        # d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1) # k
-        d = self.map_to_dir(x)
-        dotprod = (p*d).sum(-2, keepdims=True)
+        d = self.map_to_dir(x.transpose(1,-1)).transpose(1,-1) # k
+        # d = self.map_to_dir(x)
+        dotprod = (p*d).sum(2, keepdims=True)
         mask = (dotprod >= 0).float()
-        d_norm_sq = (d*d).sum(-2, keepdims=True)
+        d_norm_sq = (d*d).sum(2, keepdims=True)
         x_out = self.negative_slope * p + (1-self.negative_slope) * (mask*p + (1-mask)*(p-(dotprod/(d_norm_sq+EPS))*d))
         return x_out
+
 
 class VNBatchNorm(nn.Module):
     def __init__(self, num_features, dim):
@@ -89,33 +90,16 @@ class VNBatchNorm(nn.Module):
     
     def forward(self, x):
         '''
-        x: point features of shape [B, N_feat, 3, N_samples, ...] if using transpose(1, -1)
+        x: point features of shape [B, N_feat, 3, N_samples, ...] 
         '''
         # norm = torch.sqrt((x*x).sum(2))
-
-        '''
-        Shape adjustment for VNStdFeature when x is shaped (B, C, 3)
-
-        dim=-2 : 2-norm of vector-list feature dimension (3)
-        '''
-        if x.ndim < 4: 
-            norm = torch.norm(x.unsqueeze(-1), dim=-2).squeeze(-1) + EPS 
-            norm_bn = self.bn(norm)
-            norm = norm.unsqueeze(-2)
-            norm_bn = norm_bn.unsqueeze(-2)
-            x = x.transpose(1,-1) / norm * norm_bn
-
-            return x.transpose(1,-1)
+        norm = torch.norm(x, dim=2) + EPS
+        norm_bn = self.bn(norm)
+        norm = norm.unsqueeze(2)
+        norm_bn = norm_bn.unsqueeze(2)
+        x = x / norm * norm_bn
         
-        else: 
-            norm = torch.norm(x, dim=-2) + EPS 
-
-            norm_bn = self.bn(norm)
-            norm = norm.unsqueeze(-2)
-            norm_bn = norm_bn.unsqueeze(-2)
-            x = x / norm * norm_bn
-            
-            return x
+        return x
 
 
 class VNMaxPool(nn.Module):
@@ -155,18 +139,12 @@ class VNStdFeature(nn.Module):
     
     def forward(self, x):
         '''
-        x: (B, 3, C),  where C = nb_units // 3
-
-        in_channel = nb_units // 3 (*2 when mean is concatenated)
-
-        dim = 3
-
-        vn1, vn2, vn_lin all performs linear layer on feature vector C
+        x: point features of shape [B, N_feat, 3, N_samples, ...]
         '''
-        z0 = x                                               # Shape: (B, 3, C)  
-        z0 = self.vn1(z0)                                    # Shape: (B, 3, C//2)    
-        z0 = self.vn2(z0)                                    # Shape: (B, 3, C//4) 
-        z0 = self.vn_lin(z0)                                 # Shape: (B, 3, 3)    
+        z0 = x                                                  
+        z0 = self.vn1(z0)                                      
+        z0 = self.vn2(z0)                                       
+        z0 = self.vn_lin(z0.transpose(1, -1)).transpose(1, -1) 
         
         if self.normalize_frame:
             # make z0 orthogonal. u2 = v2 - proj_u1(v2)
@@ -183,33 +161,33 @@ class VNStdFeature(nn.Module):
             # compute the cross product of the two output vectors        
             u3 = torch.cross(u1, u2)
             z0 = torch.stack([u1, u2, u3], dim=1).transpose(1, 2)
-        # else:
-        #     z0 = z0.transpose(1, 2)     # shape :(B, 3, 3(hidden)) to (B, 3(hidden), 3)
+        else:
+            z0 = z0.transpose(1, 2)  # z0 : [B, 3(hidden), 3, ...] to [B, 3, 3(hidden), ...]
             
         '''
-            j = Initial x,y,z dimension of 3 
+            j = Initial x,y,z vector dimension of 3 
             k = Dimension D linearly transformed to 3
         '''
         if self.dim == 4:
-            x_std = torch.einsum('blji, bljk-> blki', x, z0) 
+            x_std = torch.einsum('bijm,bjkm->bikm', x, z0)
             # Shape:
-            # x:  (B, L, 3, D)
-            # z0: (B, L, 3, 3)
-            # ->  (B, L, 3, D)
+            # x:  (B, D, 3, L)
+            # z0: (B, 3, 3, L)
+            # ->  (B, D, 3, L)
             
         elif self.dim == 3:
-            x_std = torch.einsum('bjd, bjk ->bdk', x, z0) 
+            x_std = torch.einsum('bij,bjk->bik', x, z0)
             # Shape: 
-            # x:  (B, 3, D),  
+            # x:  (B, D, 3),  
             # z0: (B, 3, 3) 
             # ->  (B, D, 3)
 
         elif self.dim == 5:
-            x_std = torch.einsum('bljhd,bljhk->blkhd', x, z0) 
+            x_std = torch.einsum('bijmn,bjkmn->bikmn', x, z0)
             # Shape:
-            # x:  (B, L, 3, H, D),  
-            # z0: (B, L, 3, H, 3),
-            # ->  (B, L, 3, H, D)
+            # x:  (B, 2*D, 3, L, H) 
+            # z0: (B, 3, 3, L, H) 
+            # ->  (B, 2*D, 3, L, H)
         
         return x_std, z0
     
