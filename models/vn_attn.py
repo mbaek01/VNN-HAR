@@ -140,3 +140,35 @@ class VNAttentionWithContext(nn.Module):
         return out
 
 
+class VNAttentionWithContext2(nn.Module):
+    def __init__(self, hidden_dim, length_dim, act_fn="vn_leaky_relu"):
+        super(VNAttentionWithContext2, self).__init__()
+
+        self.fc1 = VNLinear(hidden_dim, hidden_dim)  
+        self.fc2 = VNLinear(hidden_dim, hidden_dim)
+        
+        if act_fn == "vn_leaky_relu":
+            self.activation = VNLeakyReLU(hidden_dim, share_nonlinearity=False, negative_slope=0.2)
+        elif act_fn == "vn_relu":
+            self.activation = VNLeakyReLU(hidden_dim, share_nonlinearity=False, negative_slope=0.0)
+        else:
+            raise NotImplementedError
+        
+        self.fc3 = VNLinear(length_dim, 1)
+
+    def forward(self, x):
+        # context = x[:, :-1, :]
+        # last = x[:, -1, :]
+        '''
+        x: (B, D, 3, L)   where   D = d_model =nb_units // 3
+        '''
+        ht = self.fc1(x)                                                            # (B, D, 3, L)
+        hs = self.fc2(x)
+        score = torch.einsum("bdvl, bdvi->bivl", ht, hs)                            # (B, L, 3, L)
+
+        ait = self.fc3(score)                                                       # (B, 1, 3, L)
+
+        attn_weights = F.softmax(ait, dim=3)                                           
+
+        out = torch.einsum("bsvl, bdvl->bsdv", attn_weights, x).squeeze(1) # + last # (B, D, 3)
+        return out

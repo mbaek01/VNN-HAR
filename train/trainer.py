@@ -145,11 +145,11 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"The model: '{model_path}' does not exist.")
 
-    model = Model(args)
-    device = model.device
-    model = model.model
-    model.load_state_dict(torch.load(model_path))
-    model.eval()
+    model_inf = Model(args)
+    device = model_inf.device
+    model_inf = model_inf.model
+    model_inf.load_state_dict(torch.load(model_path))
+    model_inf.eval()
 
     preds = []
     trues = []
@@ -163,7 +163,7 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
         if args.test_rot in ["so3", "z"]:
             batch_x1 = rotation(batch_x1, args.test_rot, device)
 
-        outputs = model(batch_x1)
+        outputs = model_inf(batch_x1)
     
         preds.extend(list(np.argmax(outputs.detach().cpu().numpy(),axis=1)))
         trues.extend(list(batch_y.detach().cpu().numpy()))

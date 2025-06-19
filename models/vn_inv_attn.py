@@ -13,13 +13,13 @@ class VNInvAttentionLayer(nn.Module):
         self.query = VNLinear(d_model, d_model)                                                     
         self.key = VNLinear(d_model, d_model)                                    
         self.value = VNLinear(d_model, d_model)                                 
-        self.out = VNLinear(2*d_model, d_model)
+        self.out = VNLinear(d_model, d_model) # 2*d_model
 
         self.n_heads = n_heads
 
-        self.q_std_feature = VNStdFeature(2*d_model//n_heads, dim=5, normalize_frame=False)
-        self.k_std_feature = VNStdFeature(2*d_model//n_heads, dim=5, normalize_frame=False)
-        self.v_std_feature = VNStdFeature(2*d_model//n_heads, dim=5, normalize_frame=False)
+        # self.q_std_feature = VNStdFeature(2*d_model//n_heads, dim=5, normalize_frame=False)
+        # self.k_std_feature = VNStdFeature(2*d_model//n_heads, dim=5, normalize_frame=False)
+        # self.v_std_feature = VNStdFeature(2*d_model//n_heads, dim=5, normalize_frame=False)
 
     def forward(self, queries, keys, values):
         '''
@@ -33,33 +33,33 @@ class VNInvAttentionLayer(nn.Module):
         keys = self.key(keys).permute(0,3,1,2).view(B, L, H, -1, 3)
         values = self.value(values).permute(0,3,1,2).view(B, L, H, -1, 3)
 
-        # Invariant query, key, values with mean concatenation
-        queries_mean = queries.mean(dim=1, keepdim=True).expand(queries.size())    
-        queries = torch.cat((queries, queries_mean), -2)                        # (B, L, H, 2*D, 3)
+        # # Invariant query, key, values with mean concatenation
+        # queries_mean = queries.mean(dim=1, keepdim=True).expand(queries.size())    
+        # queries = torch.cat((queries, queries_mean), -2)                        # (B, L, H, 2*D, 3)
 
-        keys_mean = keys.mean(dim=1, keepdim=True).expand(keys.size())
-        keys = torch.cat((keys, keys_mean), -2)         
+        # keys_mean = keys.mean(dim=1, keepdim=True).expand(keys.size())
+        # keys = torch.cat((keys, keys_mean), -2)         
 
-        values_mean = values.mean(dim=1, keepdim=True).expand(values.size())
-        values = torch.cat((values, values_mean), -2)                                                   
+        # values_mean = values.mean(dim=1, keepdim=True).expand(values.size())
+        # values = torch.cat((values, values_mean), -2)                                                   
 
-        queries_inv, _ = self.q_std_feature(queries.permute(0,3,4,1,2))         # (B, 2*D, 3, L, H)                     
-        keys_inv, _ = self.k_std_feature(keys.permute(0,3,4,1,2))                                  
-        values_inv, _ = self.v_std_feature(values.permute(0,3,4,1,2))                           
+        # queries_inv, _ = self.q_std_feature(queries.permute(0,3,4,1,2))         # (B, 2*D, 3, L, H)                     
+        # keys_inv, _ = self.k_std_feature(keys.permute(0,3,4,1,2))                                  
+        # values_inv, _ = self.v_std_feature(values.permute(0,3,4,1,2))                           
 
-        queries_inv = queries_inv.permute(0,3,4,1,2)                            # (B, L, H, 2*D, 3) 
-        keys_inv = keys_inv.permute(0,3,4,1,2)
-        values_inv = values_inv.permute(0,3,4,1,2)
+        # queries_inv = queries_inv.permute(0,3,4,1,2)                            # (B, L, H, 2*D, 3) 
+        # keys_inv = keys_inv.permute(0,3,4,1,2)
+        # values_inv = values_inv.permute(0,3,4,1,2)
 
         # Attention Score Applied
-        score = torch.einsum("blhdv, bshdv->bhvls", queries_inv, keys_inv)      # (B, H, 3, L, L)
-        _, _, _, _, D = queries_inv.shape
+        score = torch.einsum("blhdv, bshdv->bhvls", queries, keys)      # (B, H, 3, L, L)
+        _, _, _, _, D = queries.shape
         scale = 1./math.sqrt(D)
         Attn = torch.softmax(scale * score, dim=-1)
-        V = torch.einsum("bhvls, bshdv->blvhd", Attn, values_inv).contiguous()  # (B, L, 3, H, 2*D)
+        V = torch.einsum("bhvls, bshdv->blvhd", Attn, values).contiguous()  # (B, L, 3, H, D)
 
         # Merge heads
-        out = V.view(B, L, 3, -1)                                               # (B, L, 3, 2*D)
+        out = V.view(B, L, 3, -1)                                               # (B, L, 3, D)
         out = self.out(out.transpose(1,-1))                                     # (B, D, 3, L)
         return out, Attn
     
@@ -101,6 +101,13 @@ class VNInvEncoderLayer(nn.Module):
 
 
 class VNInvAttentionWithContext(nn.Module):
+    '''
+    Global Temporal Attention from "Human Activity Recognition from Wearable Sensor Data Using Self-Attention" by Mahmud et al.
+
+    Follows the work of Yang et al. [https://www.cs.cmu.edu/~diyiy/docs/naacl16.pdf]
+    "Hierarchical Attention Networks for Document Classification"
+    by using a context vector to assist the attention
+    '''
     def __init__(self, hidden_dim, act_fn="vn_leaky_relu"):
         super(VNInvAttentionWithContext, self).__init__()
 

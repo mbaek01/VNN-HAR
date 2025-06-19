@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from .attn import AttentionWithContext, EncoderLayer
+from .attn import AttentionWithContext, EncoderLayer, AttentionWithContext2
 
 class Baseline(nn.Module):
     def __init__(self, in_dim, out_dim, activation_fn):
@@ -40,13 +40,15 @@ class Baseline(nn.Module):
         return out
 
 class Baseline_Attn(nn.Module):
-    def __init__(self, in_dim, nb_classes, nb_units, activation_fn, attn_act_fn = "tanh"):
+    def __init__(self, input_shape, nb_classes, nb_units, activation_fn, attn_act_fn = "tanh"):
         super().__init__()
+        self.time_length = input_shape[2]
+        self.channel = input_shape[3]
         self.nb_units = nb_units
         self.activation_fn = activation_fn()
         self.relu = nn.ReLU()
 
-        self.fc1 = nn.Linear(in_dim, self.nb_units)
+        self.fc1 = nn.Linear(self.channel, self.nb_units)
         # self.ln1 = nn.LayerNorm(self.nb_units)
 
         # self.fc2 = nn.Linear(self.nb_units, in_dim)
@@ -55,7 +57,8 @@ class Baseline_Attn(nn.Module):
         self.EncoderLayer1 = EncoderLayer( d_model = self.nb_units, n_heads =4 , d_ff = self.nb_units*4)
         self.EncoderLayer2 = EncoderLayer( d_model = self.nb_units, n_heads =4 , d_ff = self.nb_units*4)
 
-        self.AttentionWithContext = AttentionWithContext(self.nb_units, attn_act_fn)
+        # self.AttentionWithContext = AttentionWithContext(self.nb_units, attn_act_fn)
+        self.AttentionWithContext = AttentionWithContext2(self.nb_units, self.time_length)
 
         self.fc3 = nn.Linear(self.nb_units, 4*nb_classes)
         self.dropout = nn.Dropout(p=0.2)

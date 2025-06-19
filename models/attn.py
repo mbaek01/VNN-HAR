@@ -98,3 +98,36 @@ class AttentionWithContext(nn.Module):
         return out
 
 
+class AttentionWithContext2(nn.Module):
+    def __init__(self, hidden_dim, length_dim): #  act_fn="tanh"
+        super(AttentionWithContext2, self).__init__()
+
+        self.fc1 = nn.Linear(hidden_dim, hidden_dim) # hidden_dim = nb_units
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        
+        # if act_fn == "tanh":
+        #     self.activation = nn.Tanh() 
+        # elif act_fn == "leaky_relu":
+        #     self.activation = nn.LeakyReLU()
+        # else:
+        #     raise NotImplementedError
+        
+        self.fc3 = nn.Linear(length_dim, 1, bias=False)
+
+    def forward(self, x):
+        # context = x[:, :-1, :]
+        # last = x[:, -1, :]
+        '''
+        x : (B, L, C)   where  C = nb_units
+        '''
+        ht = self.fc1(x)                                           # (B, L, C)
+        hs = self.fc2(x).transpose(-2,-1)                          # (B, C, L)
+        score = torch.matmul(ht, hs)                               # (B, L, L)
+                                    
+        ait = self.fc3(score)                                      # (B, L, 1) 
+
+        attn_weights = F.softmax(ait, dim=1).transpose(-1, -2)     # (B, 1, L)
+       
+        out = torch.matmul(attn_weights, x).squeeze(-2) # + last   # (B, C)
+        # can also do fc(out) here
+        return out

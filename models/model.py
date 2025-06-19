@@ -110,7 +110,7 @@ class model_builder(nn.Module):
         #     print(f"Model: eq_deepconvlstm")
         
         elif args.model_name =="baseline_attn":
-            self.model = Baseline_Attn(args.c_in,
+            self.model = Baseline_Attn(input_shape,
                                        args.num_classes,
                                        config["nb_units"],
                                        self.activation_fn_dict[args.activation_fn]

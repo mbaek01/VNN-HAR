@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from .vn_attn import VNEncoderLayer, VNAttentionWithContext
+from .vn_attn import VNEncoderLayer, VNAttentionWithContext, VNAttentionWithContext2
 from .vn_inv_attn import VNInvEncoderLayer, VNInvAttentionWithContext
 from .vn_layers import VNLinear, VNLeakyReLU, VNStdFeature
 from utils import vn_c_reshape
@@ -80,7 +80,7 @@ class VN_Baseline_Attn(nn.Module):
         self.VNEncoderLayer1 = VNEncoderLayer(d_model = self.nb_units, n_heads=4 , d_ff = self.nb_units*4)
         self.VNEncoderLayer2 = VNEncoderLayer(d_model = self.nb_units, n_heads=4 , d_ff = self.nb_units*4)
 
-        self.VNAttentionWithContext = VNAttentionWithContext(self.nb_units, attn_act_fn)
+        self.VNAttentionWithContext = VNAttentionWithContext2(self.nb_units, self.time_length, attn_act_fn)
 
         self.std_feature = VNStdFeature(self.nb_units, dim=3, normalize_frame=False)
 
