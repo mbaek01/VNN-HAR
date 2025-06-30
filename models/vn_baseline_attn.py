@@ -91,8 +91,8 @@ class VN_Baseline_Attn(nn.Module):
         self.fc_out = nn.Linear(4*nb_classes, nb_classes)
 
     def forward(self, x):                                                 # (B, 1, L, C)
-        x = vn_c_reshape(x, self.time_length).squeeze(1).transpose(1,-1)  # (B, C//3, 3, L)
-
+        x = vn_c_reshape(x, self.time_length).transpose(2,3)              # (B, 1, L, 3, C//3)
+        # TODO: apply pooling
         x = self.vn_act(self.fc1(x))                                      # (B, D, 3, L)
         
         x = self.VNEncoderLayer1(x)                                       # (B, D, 3, L)

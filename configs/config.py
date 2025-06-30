@@ -66,6 +66,8 @@ def get_args():
     args.drop_last = False
     args.train_vali_quote = 0.90
     args.f_in = 1 # input filter channel size
+    args.f_out = 341
+    args.num_neighbors = 5
 
     window_seconds = config["window_seconds"]
     args.windowsize = int(window_seconds * config["sampling_freq"])
@@ -74,6 +76,7 @@ def get_args():
     args.sampling_freq = config["sampling_freq"]
     args.num_classes = config["num_classes"]
     args.filter_scaling_factor = 1
+    args.pos_select = ["hand"] # None
     args.sensor_select = ["acc"]
     args.seed = 10
     args.filtering = True

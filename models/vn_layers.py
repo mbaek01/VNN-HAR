@@ -171,9 +171,9 @@ class VNStdFeature(nn.Module):
         if self.dim == 4:
             x_std = torch.einsum('bijm,bjkm->bikm', x, z0)
             # Shape:
-            # x:  (B, D, 3, L)
+            # x:  (B, C, 3, L)
             # z0: (B, 3, 3, L)
-            # ->  (B, D, 3, L)
+            # ->  (B, C, 3, L)
             
         elif self.dim == 3:
             x_std = torch.einsum('bij,bjk->bik', x, z0)
@@ -193,37 +193,51 @@ class VNStdFeature(nn.Module):
     
 
 class VNLayerNorm(nn.Module):
-    def __init__(self, d_features, eps=1e-6, affine=True, bias=False):
+    def __init__(self, d_features, eps=1e-6, affine=True):
         super().__init__()
         self.eps = eps
         self.affine = affine
-        self.bias = bias
-        if self.affine:
-            # gamma: learnable scale for each feature (C)
-            self.gamma = nn.Parameter(torch.ones(1, 1, 1, d_features))  # shape (1,1,1,C)
-        if self.bias:
-            # Not used for equivariance, but included for completeness
-            self.beta = nn.Parameter(torch.zeros(1, 1, 1, d_features))  # shape (1,1,1,C)
+        self.norm = nn.LayerNorm(d_features, eps=eps, elementwise_affine=affine)
 
-    def forward(self, x):
-        # x: (B, L, 3, C)
-        # Compute the norm of each 3D vector (over dim=2)
-        norms = torch.norm(x, dim=2, keepdim=True)  # (B, L, 1, C)
-        
-        # Compute mean and std over C (feature dimension)
-        mean = norms.mean(dim=3, keepdim=True)      # (B, L, 1, 1)
-        std = norms.std(dim=3, keepdim=True)        # (B, L, 1, 1)
-        
-        # Normalize norms
-        normed_norms = (norms - mean) / (std + self.eps)  # (B, L, 1, C)
+    def forward(self, x):  # x: (B, L, C, 3)
+        norms = torch.norm(x, dim=-1)        # (B, L, C)
+        normed = self.norm(norms)            # (B, L, C)
+        scale = (normed / (norms + self.eps)).unsqueeze(-1)  # (B, L, C, 1)
+        return x * scale
+    
 
-        # Apply scale (and optional bias)
-        if self.affine:
-            normed_norms = normed_norms * self.gamma
-        if self.bias:
-            normed_norms = normed_norms + self.beta
+def knn(x, k):
+    inner = -2*torch.matmul(x.transpose(2, 1), x)
+    xx = torch.sum(x**2, dim=1, keepdim=True)
+    pairwise_distance = -xx - inner - xx.transpose(2, 1)
+ 
+    idx = pairwise_distance.topk(k=k, dim=-1)[1]   # (batch_size, num_points, k)
+    return idx
 
-        # Rescale original vectors to have normalized norms
-        safe_norms = norms + self.eps  # avoid division by zero
-        x_normed = x / safe_norms * normed_norms  # (B, L, 3, C)
-        return x_normed
+
+def get_graph_feature_cross(x, k=20, idx=None):
+    batch_size = x.size(0)
+    num_points = x.size(3)
+    x = x.view(batch_size, -1, num_points)
+    if idx is None:
+        idx = knn(x, k=k)
+    device = torch.device('cuda')
+
+    idx_base = torch.arange(0, batch_size, device=device).view(-1, 1, 1)*num_points
+
+    idx = idx + idx_base
+
+    idx = idx.view(-1)
+ 
+    _, num_dims, _ = x.size()
+    num_dims = num_dims // 3
+
+    x = x.transpose(2, 1).contiguous()
+    feature = x.view(batch_size*num_points, -1)[idx, :]
+    feature = feature.view(batch_size, num_points, k, num_dims, 3) 
+    x = x.view(batch_size, num_points, 1, num_dims, 3).repeat(1, 1, k, 1, 1)
+    cross = torch.cross(feature, x, dim=-1)
+    
+    feature = torch.cat((feature-x, x, cross), dim=3).permute(0, 3, 4, 1, 2).contiguous()
+  
+    return feature

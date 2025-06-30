@@ -258,10 +258,9 @@ def get_setting_name(args):
             )
 
     elif args.model_name == "vn_sa_har":
-        setting = "vn_sa_har_data_{}_seed_{}_window_size_{}_num_units_{}_batch_size_{}_{}".format(
+        setting = "vn_sa_har_data_{}_f_in_{}_num_units_{}_batch_size_{}_{}".format(
             args.data_name,
-            args.seed,
-            args.windowsize,
+            args.f_in,
             config["nb_units"],
             args.batch_size,
             args.timestamp
@@ -353,21 +352,31 @@ def get_setting_name(args):
     return setting
     
 def vn_c_reshape(x, time_length):
-    # For PAMAP only!!
+    """
+    For PAMAP only
 
-    # Example input: (batch, 1, time_length, 9)
-    # Original order: [x_hand, y_hand, z_hand, x_chest, y_chest, z_chest, x_ankle, y_ankle, z_ankle]
-    channel_indices = [
-        0, 3, 6,  # x for hand, chest, ankle
-        1, 4, 7,  # y for hand, chest, ankle
-        2, 5, 8   # z for hand, chest, ankle
-    ]
-    batch = x.size(0)
+    Args:
+        x: Tensor of shape (batch, 1, time_length, C) where C = 3 × num_sensors
+        time_length: expected time length (unchanged)
 
-    # x is your input tensor of shape (batch, 1, time_length, 9)
-    x_reordered = x[:, :, :, channel_indices]  # [batch, 1, time_length, 9]
+    Returns:
+        Tensor of shape (batch, 1, time_length, 3, num_sensors)
+    """
 
-    # Now reshape
-    x_reshaped = x_reordered.reshape(batch, 1, time_length, 3, -1) # [batch, 1, time_length, 3(xyz), Channels // 3]
+    batch, _, t_len, num_channels = x.shape
+    assert t_len == time_length, f"Expected time_length {time_length}, got {t_len}"
+    assert num_channels % 3 == 0, f"Channel count {num_channels} is not divisible by 3 (must be x/y/z per sensor)"
+
+    num_sensors = num_channels // 3
+
+    # Reorder from [x1,y1,z1, x2,y2,z2, ...] → [x1,x2,..., y1,y2,..., z1,z2,...]
+    x_indices = [i for i in range(0, num_channels, 3)]
+    y_indices = [i for i in range(1, num_channels, 3)]
+    z_indices = [i for i in range(2, num_channels, 3)]
+    channel_indices = x_indices + y_indices + z_indices
+
+    # Reorder and reshape
+    x_reordered = x[:, :, :, channel_indices]                                # (B, 1, L, D*3) where D = num_sensors
+    x_reshaped = x_reordered.reshape(batch, 1, time_length, 3, num_sensors)  # (B, 1, L, 3, D)
 
     return x_reshaped

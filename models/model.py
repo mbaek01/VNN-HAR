@@ -10,7 +10,7 @@ from .sa_har import SA_HAR
 from .deepconvlstm import DeepConvLSTM
 from .deepconvlstm_attn import DeepConvLSTM_ATTN
 from .vn_baseline_attn import VN_Baseline_Attn, VN_Inv_Baseline_Attn
-from .vn_sa_har import VN_SA_HAR
+from .vn_sa_har import VN_With_SA_HAR
 # from .eq_deepconvlstm import EqDeepConvLSTM
 
 class Model(object):
@@ -71,8 +71,8 @@ class model_builder(nn.Module):
         else:
             f_in = input_f_channel
 
-        # input shape for all models: (B, f_in, L, C) ; f_in = 1
-        input_shape = (args.batch_size, f_in, args.input_length, args.c_in)
+        # input shape for all models: (B, f_in, L, D) ; f_in = 1
+        input_shape = [args.batch_size, f_in, args.input_length, args.c_in]
         print(f"Input Size: {input_shape}")
 
         if args.model_name == "sa_har":
@@ -83,10 +83,13 @@ class model_builder(nn.Module):
             print(f"Model: sa_har")
         
         elif args.model_name == "vn_sa_har":
-            self.model = VN_SA_HAR(input_shape,
+            self.model = VN_With_SA_HAR(input_shape,
                                    args.num_classes,
-                                   int(config["nb_units"])
-                                   )
+                                   args.num_neighbors,
+                                   f_in, 
+                                   args.f_out,
+                                   config)
+                                   
             print(f"Model: vn_sa_har")
 
         elif args.model_name == "deepconvlstm":

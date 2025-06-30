@@ -93,10 +93,17 @@ class PAMAP2(object):
 
         # Select which sensor columns to use
         self.sensor_filter      = ["acc", "gyro"]
-        # self.pos_filter         = ["hand", "chest", "ankle"]
+        self.pos_filter         = ["hand", "chest", "ankle"]
 
-        # self.selected_cols  = self.Sensor_filter_acoording_to_pos_and_type(args.pos_select, self.pos_filter, self.col_names[1:], "position")
-        self.selected_cols  = self.Sensor_filter_acoording_to_pos_and_type(args.sensor_select, self.sensor_filter, self.col_names[1:], "Sensor Type") # self.col_names[1:] to self.selected_cols
+        # selected_cols will be updated according to user settings. User have to set -- args.pos_select, args.sensor_select---
+        self.selected_cols = None
+        # Filtering channels according to the Position
+        self.selected_cols = self.Sensor_filter_acoording_to_pos_and_type(args.pos_select, self.pos_filter, self.col_names[1:], "position")
+        # Filtering channels according to the Sensor Type
+        if self.selected_cols is None:
+            self.selected_cols = self.Sensor_filter_acoording_to_pos_and_type(args.sensor_select, self.sensor_filter, self.col_names[1:], "Sensor Type")
+        else:
+            self.selected_cols = self.Sensor_filter_acoording_to_pos_and_type(args.sensor_select, self.sensor_filter, self.selected_cols, "Sensor Type")
 
         self.labelToId = {int(x[0]): i for i, x in enumerate(self.label_map)}
 
@@ -142,7 +149,7 @@ class PAMAP2(object):
             with open(saved_data_path, 'rb') as f:
                 data = pickle.load(f)
             
-            data_x = data['data_x']
+            data_x = data['data_x'][["sub_id"] + self.selected_cols + ["sub"]]
             data_y = data['data_y']
         
         else: # if not saved yet
@@ -291,13 +298,17 @@ class PAMAP2(object):
 
         # random.shuffle(train_vali_window_index)
 
-        # self.train_window_index = train_vali_window_index[:int(self.train_vali_quote*len(train_vali_window_index))]
-        # self.vali_window_index = train_vali_window_index[int(self.train_vali_quote*len(train_vali_window_index)):]
+
 
         # train valid stratified split
-        self.train_window_index, self.vali_window_index, _, _ = self.stratified_train_valid_split(windows=train_vali_window_index, 
-                                                                                                activities=[self.activity_per_windows[i] for i in train_vali_window_index],
-                                                                                                valid_ratio=1.0-self.train_vali_quote)
+        if self.train_vali_quote == 1.0:
+            self.train_window_index = train_vali_window_index[:int(self.train_vali_quote*len(train_vali_window_index))]
+            self.vali_window_index = []
+            # self.vali_window_index = train_vali_window_index[int(self.train_vali_quote*len(train_vali_window_index)):]
+        else:
+            self.train_window_index, self.vali_window_index, _, _ = self.stratified_train_valid_split(windows=train_vali_window_index, 
+                                                                                                    activities=[self.activity_per_windows[i] for i in train_vali_window_index],
+                                                                                                    valid_ratio=1.0-self.train_vali_quote)
 
 
     def normalization(self, train_vali, test): # test=None
