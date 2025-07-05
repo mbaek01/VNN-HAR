@@ -3,7 +3,7 @@ import math
 import torch
 from typing import Optional, Union
 
-from utils import vn_c_reshape
+from utils import vn_c_reshape, vn_c_unreshape
 
 """
 This file contains code adapted from the PyTorch3D library:
@@ -18,28 +18,20 @@ Ravi et al., "Accelerating 3D Deep Learning with PyTorch3D", arXiv:2007.08501
 
 Device = Union[str, torch.device]
 
-def rotation(batch_x1, rot, device):
-    # batch_x1: (B, 1, L, C)
+def apply_rotation(batch_x1, trot):
+    # batch_x1: (B, C, L, 3*D)
     time_length = batch_x1.size(2)
-    batch_x1 = vn_c_reshape(batch_x1, time_length).squeeze(1)           # (B, 1, L, C) -> (B, L, 3, C//3)
+    batch_x1 = vn_c_reshape(batch_x1, time_length)                      # (B, C, L, 3, D)
 
-    batch_x1 = batch_x1.transpose(-2, -1)                               # (B, L, C//3, 3)
+    B, C, L, _, D = batch_x1.shape
+    batch_x1_reshaped = batch_x1.reshape(B, C*D, 3, L)                  # (B, C*D, 3, L)
 
-    trot = None
-
-    if rot == "so3":
-        trot = Rotate(batch_x1.shape[0], 'so3', device, torch.float64)
-    elif rot == "z":
-        trot = Rotate(batch_x1.shape[0], 'z', device, torch.float64)
-
-    # TODO: return trot here to continue using rotation matrix multiple times
-
-    if trot is not None:
-        batch_x1_rot = trot.transform_points(batch_x1)
+    batch_x1_rot = trot.transform_points(batch_x1_reshaped)             # (B, C*D, L, 3)
 
     # back to original input shape 
-    batch_x1_rot = batch_x1_rot.transpose(-1,-2).flatten(start_dim=-2) # (B, L, C)
-    batch_x1_rot = batch_x1_rot.unsqueeze(1)                           # (B, 1, L ,C) - original shape
+    batch_x1_rot = batch_x1_rot.reshape(B, C, L, 3, D)                  # (B, C, L, 3, D)  
+
+    batch_x1_rot = vn_c_unreshape(batch_x1_rot)                         # (B, C, L, 3*D)
 
     return batch_x1_rot
 
@@ -141,22 +133,28 @@ class Rotate:
             points_out: points of shape (N, P, 3) or (P, 3) depending
             on the dimensions of the transform
         """
-        points_batch = points.clone()
-        # if points_batch.dim() == 2:
-        #     points_batch = points_batch[None]  # (P, 3) -> (1, P, 3)
-        # if points_batch.dim() != 3:
-        #     msg = "Expected points to have dim = 2 or dim = 3: got shape %r"
-        #     raise ValueError(msg % repr(points.shape))
+        # points_batch = points.clone()
+        # # if points_batch.dim() == 2:
+        # #     points_batch = points_batch[None]  # (P, 3) -> (1, P, 3)
+        # # if points_batch.dim() != 3:
+        # #     msg = "Expected points to have dim = 2 or dim = 3: got shape %r"
+        # #     raise ValueError(msg % repr(points.shape))
 
-        # points_out = self._broadcast_bmm(points_batch, self.rotation) # (N, P, 3) @ (N, 3, 3)
+        # # points_out = self._broadcast_bmm(points_batch, self.rotation) # (N, P, 3) @ (N, 3, 3)
 
-        B, L, C, _ = points_batch.shape
-        points_batch = points_batch.reshape(B, L*C, 3)      # (B, L*C, 3)
+        # B, C, L, D, _ = points_batch.shape
+        # points_batch = points_batch.reshape(B, C*L*D, 3)      # (B, 1*L*D, 3)
 
-        points_out = torch.bmm(points_batch, self.rotation)
-        points_out = points_out.view(B, L, C, 3)
+        # points_out = torch.bmm(points_batch, self.rotation)
+        # points_out = points_out.view(B, C, L, D, 3)
 
-        return points_out.transpose(-2, -1) # (B, L, 3, C)
+        # return points_out.transpose(-2, -1) # (B, 1, L, 3, D)
+
+        assert points.ndim == 4, f"Expected input to have 5 dimensions, but got {points.ndim}" 
+
+        rotated_points = torch.einsum('bij,bcjl->bcil', self.rotation, points).contiguous()
+
+        return rotated_points
 
     def _copysign(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
         """

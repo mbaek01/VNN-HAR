@@ -20,6 +20,9 @@ class VNDGCNNEncoder(nn.Module):
         self.layers = nn.ModuleList(layers)
 
     def forward(self, x):
+        '''
+        input shape: (B, 1, 3, L)
+        '''
         x_list = []
 
         for layer in self.layers[:-1]:

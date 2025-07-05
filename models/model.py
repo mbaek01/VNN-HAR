@@ -72,7 +72,7 @@ class model_builder(nn.Module):
             f_in = input_f_channel
 
         # input shape for all models: (B, f_in, L, D) ; f_in = 1
-        input_shape = [args.batch_size, f_in, args.input_length, args.c_in]
+        input_shape = [args.batch_size, f_in, args.input_length, 3*int(len(args.pos_select)*len(args.sensor_select))]
         print(f"Input Size: {input_shape}")
 
         if args.model_name == "sa_har":

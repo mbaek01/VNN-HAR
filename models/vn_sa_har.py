@@ -109,7 +109,7 @@ class VN_With_SA_HAR(nn.Module):
 
         self.time_length = input_shape[2]
         input_shape[1] = 2*f_out  # C 
-        input_shape[3] //= 3    # (B, f_out, L, D)
+        # input_shape[3] //= 3    # (B, f_out, L, D)
 
         self.SA_HAR_Classifier = SA_HAR(input_shape, nb_classes, config)
 
@@ -126,6 +126,7 @@ class VN_With_SA_HAR(nn.Module):
             (B, P, 3, L*S)
             (B, S, 3, L*P)
             
+        Need to apply changes also in apply_rotation()'s reshaping methods in rotation.py    
         '''
 
         # Equivariant Lifting Layer

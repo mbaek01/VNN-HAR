@@ -196,22 +196,21 @@ class VNLayerNorm(nn.Module):
     def __init__(self, d_features, eps=1e-6, affine=True):
         super().__init__()
         self.eps = eps
-        self.affine = affine
-        self.norm = nn.LayerNorm(d_features, eps=eps, elementwise_affine=affine)
+        self.norm = nn.LayerNorm(d_features, eps=eps)
 
-    def forward(self, x):  # x: (B, L, C, 3)
-        norms = torch.norm(x, dim=-1)        # (B, L, C)
-        normed = self.norm(norms)            # (B, L, C)
-        scale = (normed / (norms + self.eps)).unsqueeze(-1)  # (B, L, C, 1)
+    def forward(self, x):  # x:  (B, C, 3, L)
+        norms = torch.norm(x, dim=-2)                                # (B, C, L)
+        normed = self.norm(norms.transpose(-2,-1)).transpose(-2,-1)  # (B, C, L)
+        scale = (normed / (norms + self.eps)).unsqueeze(-2)          # (B, C, 1, L)
         return x * scale
     
 
 def knn(x, k):
-    inner = -2*torch.matmul(x.transpose(2, 1), x)
+    inner = -2*torch.matmul(x.transpose(2, 1), x)        # (B, L, L)
     xx = torch.sum(x**2, dim=1, keepdim=True)
-    pairwise_distance = -xx - inner - xx.transpose(2, 1)
+    pairwise_distance = -xx - inner - xx.transpose(2, 1) # (B, L, L)
  
-    idx = pairwise_distance.topk(k=k, dim=-1)[1]   # (batch_size, num_points, k)
+    idx = pairwise_distance.topk(k=k, dim=-1)[1]         # (B, L, k)
     return idx
 
 

@@ -3,13 +3,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .vn_layers import VNLeakyReLU, VNLinearLeakyReLU, VNLinear
+from .vn_layers import VNLeakyReLU, VNLinearLeakyReLU, VNLinear, VNLayerNorm
 
 # VNSensorAttention Not Used
 class VNSensorAttention(nn.Module):
     def __init__(self, input_shape, nb_units):
         super(VNSensorAttention, self).__init__()
-        self.ln = nn.LayerNorm(input_shape[3] // 3)        # input_shape[3] = c_in
+        self.ln = VNLayerNorm(input_shape[3] // 3)        # input_shape[3] = c_in
         
         # self.conv_1 = nn.Conv2d(in_channels=1, out_channels=nb_units, kernel_size=3, dilation=2, padding='same')
         self.conv_1 = VNLinearLeakyReLU(1, nb_units, dim=5, share_nonlinearity=False, negative_slope=0.2) # kernel_size, dilation ?
@@ -81,33 +81,31 @@ class VNEncoderLayer(nn.Module):
 
         self.attention = VNAttentionLayer(d_model, n_heads)
         self.dropout1 = nn.Dropout(p=dropout)
-        self.layernorm1 = nn.LayerNorm((d_model,3))     
+        self.layernorm1 = VNLayerNorm(d_model)     
         
         d_ff = d_ff or 4*d_model
         self.ffn1 = VNLinear(d_model, d_ff)
         self.vn_relu = VNLeakyReLU(d_ff, share_nonlinearity=False, negative_slope=0.0)
         self.ffn2 = VNLinear(d_ff, d_model)
          
-        self.layernorm2 = nn.LayerNorm((d_model,3))                
+        self.layernorm2 = VNLayerNorm(d_model)                
         
         self.dropout2 = nn.Dropout(p=dropout)
 
     def forward(self, x):
         '''
-        x shape: (B, L, 3, C) where C = d_model = nb_units // 3
+        x: [B, D, 3, L]
         '''
         attn_output, attn = self.attention( x, x, x )                                 # (B, D, 3, L)
-        attn_output = self.dropout1(attn_output)                
+        # attn_output = self.dropout1(attn_output)                
 
-        out1  = self.layernorm1((x + attn_output).permute(0,3,1,2)).permute(0,2,3,1)  # (B, L, D, 3) -> (B, D, 3, L) permute
+        out1  = self.layernorm1((x + attn_output))                                  # (B, D, 3, L) 
 
         ffn_output = self.ffn2(self.vn_relu(self.ffn1(out1)))                         # (B, D, 3, L)
-        ffn_output = self.dropout2(ffn_output)                                        
+        # ffn_output = self.dropout2(ffn_output)                                        
 
-        out2 = self.layernorm2((out1 + ffn_output).permute(0,3,1,2)).permute(0,2,3,1) # (B, L, D, 3) -> (B, D, 3, L) permute
-
-        return out2                                                                   # (B, D, 3, L)
-
+        out2 = self.layernorm2((out1 + ffn_output))                                 # (B, D, 3, L) 
+        return out2                                                                   
 
 class VNAttentionWithContext(nn.Module):
     def __init__(self, hidden_dim, act_fn="vn_leaky_relu"):

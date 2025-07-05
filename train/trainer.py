@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.metrics import f1_score, accuracy_score
 
 from models.model import Model
-from train.rotation import rotation
+from train.rotation import Rotate, apply_rotation
 from utils import EarlyStopping, adjust_learning_rate_class
 
 class Trainer:
@@ -37,9 +37,16 @@ class Trainer:
             batch_x1 = batch_x1.double().to(self.device)
             batch_y = batch_y.long().to(self.device)
 
-            # Applying rotation to the data
-            if self.train_rot in ["so3", "z"]:
-                batch_x1 = rotation(batch_x1, self.train_rot, self.device)
+            # Apply rotation to the data
+            trot = None
+
+            if self.train_rot == "so3":
+                trot = Rotate(batch_x1.shape[0], 'so3', self.device, torch.float64)
+            elif self.train_rot == "z":
+                trot = Rotate(batch_x1.shape[0], 'z', self.device, torch.float64)
+
+            if trot:
+                batch_x1 = apply_rotation(batch_x1, trot)
 
             outputs = self.model(batch_x1)
             loss = self.criterion(outputs, batch_y)
@@ -66,10 +73,17 @@ class Trainer:
                 batch_x1 = batch_x1.double().to(self.device)
                 batch_y = batch_y.long().to(self.device)
 
-                # Applying rotation to the data
-                if self.train_rot in ["so3", "z"]:
-                    batch_x1 = rotation(batch_x1, self.train_rot, self.device)
+                # Apply rotation to the data
+                trot = None
 
+                if self.train_rot == "so3":
+                    trot = Rotate(batch_x1.shape[0], 'so3', self.device, torch.float64)
+                elif self.train_rot == "z":
+                    trot = Rotate(batch_x1.shape[0], 'z', self.device, torch.float64)
+
+                if trot:
+                    batch_x1 = apply_rotation(batch_x1, trot)
+                    
                 outputs = self.model(batch_x1)
                 loss = self.criterion(outputs, batch_y)
                 total_loss.append(loss.item())
@@ -159,9 +173,16 @@ def test_predictions(args, test_loader, curr_save_path, score_log, test_sub):
         batch_x1 = batch_x1.double().to(device)
         batch_y = batch_y.long().to(device)
 
-        # Applying rotation to the data
-        if args.test_rot in ["so3", "z"]:
-            batch_x1 = rotation(batch_x1, args.test_rot, device)
+        # Apply rotation to the data
+        trot = None
+
+        if args.test_rot == "so3":
+            trot = Rotate(batch_x1.shape[0], 'so3', device, torch.float64)
+        elif args.test_rot == "z":
+            trot = Rotate(batch_x1.shape[0], 'z', device, torch.float64)
+
+        if trot:
+            batch_x1 = apply_rotation(batch_x1, trot, device)
 
         outputs = model_inf(batch_x1)
     

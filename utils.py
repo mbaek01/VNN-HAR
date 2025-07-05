@@ -356,14 +356,14 @@ def vn_c_reshape(x, time_length):
     For PAMAP only
 
     Args:
-        x: Tensor of shape (batch, 1, time_length, C) where C = 3 × num_sensors
+        x: Tensor of shape (batch, 1, time_length, D//3) where D // 3 = 3 × num_sensors
         time_length: expected time length (unchanged)
 
     Returns:
         Tensor of shape (batch, 1, time_length, 3, num_sensors)
     """
 
-    batch, _, t_len, num_channels = x.shape
+    batch, f_in, t_len, num_channels = x.shape
     assert t_len == time_length, f"Expected time_length {time_length}, got {t_len}"
     assert num_channels % 3 == 0, f"Channel count {num_channels} is not divisible by 3 (must be x/y/z per sensor)"
 
@@ -376,7 +376,38 @@ def vn_c_reshape(x, time_length):
     channel_indices = x_indices + y_indices + z_indices
 
     # Reorder and reshape
-    x_reordered = x[:, :, :, channel_indices]                                # (B, 1, L, D*3) where D = num_sensors
-    x_reshaped = x_reordered.reshape(batch, 1, time_length, 3, num_sensors)  # (B, 1, L, 3, D)
+    x_reordered = x[:, :, :, channel_indices]                                # (B, C, L, D*3) where D = num_sensors
+    x_reshaped = x_reordered.reshape(batch, f_in, time_length, 3, num_sensors)  # (B, C, L, 3, D)
 
     return x_reshaped
+
+
+def vn_c_unreshape(x):
+    """
+    Inverse of vn_c_reshape.
+    
+    Args:
+        x: Tensor of shape (B, C, L, 3, D)
+
+    Returns:
+        Tensor of shape (B, C, L, 3*D) with channel order [x1,y1,z1, x2,y2,z2, ...]
+    """
+    B, C, L, _, _ = x.shape
+
+    # Flatten last two dims → shape (B, 1, L, 3*D)
+    x_flat = x.flatten(start_dim=-2)  # shape: (B, 1, L, 3*D)
+
+    # Reverse channel ordering: from [x1,x2,...,y1,y2,...,z1,z2,...] → [x1,y1,z1, x2,y2,z2, ...]
+    x_channels = x_flat.shape[-1]
+    assert x_channels % 3 == 0, f"Expected channel dimension divisible by 3, got {x_channels}"
+    num_sensors = x_channels // 3
+
+    x1 = x_flat[:, :, :, :num_sensors]       # x1,x2,...
+    y1 = x_flat[:, :, :, num_sensors:2*num_sensors]
+    z1 = x_flat[:, :, :, 2*num_sensors:]
+
+    # Interleave x1,y1,z1,...
+    reordered = torch.stack([x1, y1, z1], dim=-1)  # (B, C, L, D, 3)
+    reordered = reordered.view(B, C, L, 3 * num_sensors)  # (B, C, L, 3*D)
+
+    return reordered
